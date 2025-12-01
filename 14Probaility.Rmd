@@ -1,0 +1,918 @@
+# Probability and Probability Distributions
+
+## Learning Objectives
+
+1. Understand fundamental concepts of probability and how they apply to data analysis
+2. Distinguish between discrete and continuous probability distributions
+3. Master the normal distribution and its properties
+4. Calculate and interpret z-scores and their relationship to standard deviations
+5. Use R functions (`pnorm`, `qnorm`, `dnorm`) to calculate probabilities and quantiles
+6. Apply the empirical rule to normal distributions
+
+## What Is This For?
+
+So far in this course, we've learned to describe data - calculating means, creating visualizations, measuring spread. But description is only the beginning. The real power of statistics comes from making inferences: using what we observe in our sample to make claims about the broader population.
+
+To make that leap from description to inference, we need to understand **uncertainty**. When a poll reports that 52% of voters support a candidate "with a margin of error of ±3%," that margin comes from probability theory. When researchers claim their results are "statistically significant," they're making a probability statement. When a forecaster says a candidate has a 70% chance of winning, they're using probability distributions.
+
+This session introduces the foundation that makes all of this possible -- probability. We'll start with simple probability, build up to the normal distribution (the most important distribution in statistics), and learn how to calculate probabilities in R. 
+
+This only touches on the subject, and I will focus on concepts over formal definitions or mathematics. But having some intuition about probability will help you understand concepts later in the class. And you will certainly need to know how to calculate probabilities in R. 
+
+---
+
+## Part I: Foundations of Probability
+
+### What is Probability?
+
+At its core, **probability** is the relative frequency of occurrence for some outcome if a process is repeated many times under similar conditions. It's a number between 0 (impossible) and 1 (certain) that quantifies how likely something is to happen.  And if you consider all of the possibe events that could happen, the total probability should sum to 1.
+
+Let's start with a concrete example that builds intuition: rolling two dice.
+
+#### Example: Two Dice
+
+
+When you roll two six-sided dice, there are 36 possible outcomes:
+
+| Die 1 → | **1** | **2** | **3** | **4** | **5** | **6** |
+|---------|-------|-------|-------|-------|-------|-------|
+| **1** | (1,1) | (1,2) | (1,3) | (1,4) | (1,5) | (1,6) |
+| **2** | (2,1) | (2,2) | (2,3) | (2,4) | (2,5) | (2,6) |
+| **3** | (3,1) | (3,2) | (3,3) | (3,4) | (3,5) | (3,6) |
+| **4** | (4,1) | (4,2) | (4,3) | (4,4) | (4,5) | (4,6) |
+| **5** | (5,1) | (5,2) | (5,3) | (5,4) | (5,5) | (5,6) |
+| **6** | (6,1) | (6,2) | (6,3) | (6,4) | (6,5) | (6,6) |
+
+
+To find the probability of any sum, we count how many ways we can get that sum and divide by 36.
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+library(ggplot2)
+library(dplyr)
+
+# Calculate probability for each sum
+dice_probs <- data.frame(
+  sum = 2:12,
+  ways = c(1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1),
+  probability = c(1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1) / 36
+)
+
+# Create a bar plot
+ggplot(dice_probs, aes(x = factor(sum), y = probability)) +
+  geom_col(fill = "#2E86AB", alpha = 0.8) +
+  geom_text(aes(label = paste0(ways, "/36")), 
+            vjust = -0.5, size = 3) +
+  labs(
+    title = "Probability Distribution for Sum of Two Dice",
+    subtitle = "Most likely outcome is 7 with probability 6/36 = 1/6",
+    x = "Sum of Two Dice",
+    y = "Probability"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 11, color = "gray50")
+  ) +
+  scale_y_continuous(labels = scales::percent_format(), 
+                     limits = c(0, 0.2))
+```
+
+For example, there is only one way to end up with two dice that sum to two.  So the probability of two is 1/36.  Meanwhile, there are 6 ways to end up with a seven, so the probability of seven is 6/36. We can do that for all possible numbers.  
+
+This bar chart shows a **discrete probability distribution** - each possible outcome has a specific probability, and all probabilities sum to 1.  The outcome (the sum of two die) is on the x-axis. The probability that even twill occur is on the y-axis.
+
+### Discrete vs. Continuous Distributions
+
+**Discrete distributions** deal with countable outcomes:
+
+- Number of yes votes in the Senate (0, 1, 2, ..., 100)
+- Number of supreme court justices appointed by a president
+- Survey responses on a 1-5 scale
+
+**Continuous distributions** deal with measurements that can take any value in a range:
+
+- Voter approval ratings (any percentage from 0% to 100%)
+- Campaign spending (any dollar amount)
+- Time until election results are called
+
+With continuous distributions, we don't ask "What's the probability of exactly 51.7%?".  Since there are infinitely many outcomes, the probability of any specific number is actually 0! Instead, we ask about ranges: "What's the probability of getting between 51% and 52%?"
+
+### Formal Properties of Probability Distributions
+
+Now that we have intuition about probability, let's formalize these concepts. Understanding these properties helps us verify that our calculations are correct and builds the foundation for statistical inference.
+
+#### Properties of Discrete Probability Distributions
+
+For discrete random variables (like the sum of two dice or number of Senate votes), we use a **probability mass function (PMF)** to assign probabilities to each possible outcome.
+
+**Formal Definition**: If X is a discrete random variable that can take values x₁, x₂, x₃, ..., then P(X = xᵢ) gives the probability of each outcome.
+
+**Two fundamental properties must always hold:**
+
+1. **Non-negativity**: Every probability must be between 0 and 1
+   $$0 \leq P(X = x_i) \leq 1 \text{ for all } i$$
+
+2. **Probabilities sum to 1**: The total probability across all possible outcomes equals 1
+   $$\sum_{i} P(X = x_i) = 1$$
+
+Let's verify these properties with our dice example:
+
+```{r}
+# Verify the formal properties for our dice distribution
+dice_probs <- data.frame(
+  sum = 2:12,
+  ways = c(1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1),
+  probability = c(1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1) / 36
+)
+
+# Property 1: All probabilities between 0 and 1?
+all(dice_probs$probability >= 0 & dice_probs$probability <= 1)
+
+# Property 2: Do probabilities sum to 1?
+sum(dice_probs$probability)
+
+
+```
+
+
+#### Properties of Continuous Probability Distributions
+
+For continuous random variables (like approval ratings or voter turnout), we use a **probability density function (PDF)** denoted as f(x).
+
+**Key insight**: For continuous distributions, the probability of any exact value is 0. Instead, probabilities are "areas under the curve."
+
+**Formal Definition**: If X is a continuous random variable with PDF f(x), then:
+- f(x) gives the **density** at point x (height of the curve)
+- P(a < X < b) = area under f(x) between a and b
+
+**Two fundamental properties must always hold:**
+
+1. **Non-negativity**: The density function must be non-negative everywhere
+   $$f(x) \geq 0 \text{ for all } x$$
+   
+2. **Total area equals 1**: The total area under the curve equals 1
+   $$\int_{-\infty}^{\infty} f(x) \, dx = 1$$
+
+If that integration symbol seems intimidating, don't worry about it.  We will never be doing these calculations by hand.  Instead, we will let R handle these calculations for us.  The key points to undersand are that:
+
+* Probability for any range of values is the "area under the curve" 
+* The total probability "under the curve" for all possible values must sum to 1.
+
+
+
+### Parameters of Distributions
+
+Every probability distribution has characteristics that summarize its behavior. The two most important are:
+
+1. **Mean (μ, "mu")**: The expected value or long-run average
+2. **Variance (σ², "sigma squared")**: How spread out the values are
+
+**Critical Distinction: Parameters vs. Statistics**
+
+This is one of the most important conceptual distinctions in statistics, and it's easy to confuse. Let's break it down:
+
+**Population Parameters** (Greek letters)
+
+- These are the TRUE values for the entire population
+- We almost never know these values
+- They are fixed, unchanging numbers
+- We use Greek letters to denote them:
+  - **μ** (mu) = true population mean
+  - **σ²** (sigma squared) = true population variance  
+  - **σ** (sigma) = true population standard deviation
+
+**Sample Statistics** (Roman letters)
+
+- These are what we CALCULATE from our data
+- They vary from sample to sample
+- They are our best guesses at the population parameters
+- We use Roman letters with special notation:
+  - **x̄** (x-bar) = sample mean
+  - **s²** = sample variance
+  - **s** = sample standard deviation
+
+**Why This Matters: An Example**
+
+Imagine we want to know the average age of all U.S. voters (about 240 million people):
+
+- **μ** = the TRUE average age of all 240 million voters (maybe 47.3 years)
+  - This is unknown unless we survey everyone (census)
+  - It's a fixed number that exists in reality
+  
+- **x̄** = the average age from our sample of 1,000 voters (maybe 46.8 years)
+  - This is what we actually calculate
+  - If we took a different sample, we'd get a different x̄ (maybe 47.9)
+  - We hope it's close to μ, but it's not exactly μ
+
+The entire field of statistical inference is about using what we can calculate (statistics like x̄) to make educated guesses about what we want to know (parameters like μ). This is why we need probability theory - to understand how much our sample statistics might vary from the true population parameters.
+
+---
+
+## Part II: The Normal Distribution
+
+### Properties and Importance
+
+The **normal distribution** (also called the Gaussian distribution or bell curve) is the most important probability distribution in statistics. It appears everywhere because of the Central Limit Theorem, which says that sample averages (means) tend to follow a normal distribution regardless of the original data's shape.
+
+```{r, echo=FALSE, warning=FALSE}
+# Create a beautiful normal distribution plot
+x <- seq(-4, 4, length.out = 200)
+y <- dnorm(x)
+
+normal_df <- data.frame(x = x, y = y)
+
+ggplot(normal_df, aes(x = x, y = y)) +
+  geom_line(color = "#2E86AB", size = 1.5) +
+  geom_area(fill = "#2E86AB", alpha = 0.2) +
+  geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.5) +
+  labs(
+    title = "The Standard Normal Distribution",
+    subtitle = "Mean = 0, Standard Deviation = 1",
+    x = "Value",
+    y = "Density"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 11, color = "gray50"),
+    panel.grid.minor = element_blank()
+  ) +
+  scale_x_continuous(breaks = -3:3)
+```
+
+**Key properties of the normal distribution:**
+
+1. **Bell-shaped** and perfectly **symmetric** around the mean
+2. **Mean = Median = Mode** (all at the center)
+3. Completely determined by two parameters: μ (mean) and σ (standard deviation)
+4. Total area under the curve = 1 (like all probability distributions)
+5. Tails technically extend infinitely but get very close to zero for values far from the mean
+
+### The Standard Normal and Z-Scores
+
+The **standard normal distribution** is a special case where μ = 0 and σ = 1. Any normal distribution can be converted to standard normal using:
+
+$$Z = \frac{X - \mu}{\sigma}$$
+
+This transformation is called **standardization**, and the result is a **z-score**.
+
+#### What Z-Scores Tell Us
+
+A z-score tells you how many standard deviations a value is from the mean:
+
+- Z = 0: exactly at the mean
+- Z = 1: one standard deviation above the mean
+- Z = -2: two standard deviations below the mean
+
+```{r, echo=FALSE}
+# Visualize z-scores
+mu <- 100
+sigma <- 15
+x_vals <- seq(mu - 4*sigma, mu + 4*sigma, length.out = 200)
+y_vals <- dnorm(x_vals, mean = mu, sd = sigma)
+
+# Create data frame with special points
+df <- data.frame(x = x_vals, y = y_vals)
+
+# Special points to highlight
+special_points <- data.frame(
+  value = c(70, 85, 100, 115, 130),
+  z_score = c(-2, -1, 0, 1, 2),
+  label = c("z = -2", "z = -1", "z = 0", "z = 1", "z = 2")
+)
+special_points$y <- dnorm(special_points$value, mean = mu, sd = sigma)
+
+ggplot(df, aes(x = x, y = y)) +
+  geom_line(color = "#2E86AB", size = 1.2) +
+  geom_area(fill = "#2E86AB", alpha = 0.1) +
+  geom_segment(data = special_points, 
+               aes(x = value, xend = value, y = 0, yend = y),
+               linetype = "dashed", color = "#A23B72", alpha = 0.7) +
+  geom_point(data = special_points, 
+             aes(x = value, y = y), 
+             color = "#A23B72", size = 3) +
+  geom_text(data = special_points,
+            aes(x = value, y = y, label = label),
+            vjust = -1, size = 3.5, color = "#A23B72") +
+  labs(
+    title = "Z-Scores Show Distance from Mean in Standard Deviations",
+    subtitle = expression(paste("Example: IQ scores with ", mu, " = 100, ", sigma, " = 15")),
+    x = "IQ Score",
+    y = "Density"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 11, color = "gray50")
+  ) +
+  scale_x_continuous(breaks = special_points$value,
+                     labels = special_points$value)
+```
+
+### The Empirical Rule (68-95-99.7)
+
+For any normal distribution:
+
+- **~68%** of values fall within ±1σ of the mean
+- **~95%** of values fall within ±2σ of the mean  
+- **~99.7%** of values fall within ±3σ of the mean
+
+This rule provides quick probability estimates without calculation. For example, if test scores are normally distributed with μ = 75 and σ = 10:
+
+- About 68% score between 65 and 85
+- About 95% score between 55 and 95
+- Scores below 45 or above 105 are very rare (~0.3%)
+
+---
+
+
+## Part III: Working with Probability in R
+
+### Key R Functions for the Normal Distribution
+
+R provides four essential functions for working with normal distributions:
+
+| Function | Purpose | What It Returns | Example |
+|----------|---------|-----------------|---------|
+| `dnorm(x)` | **Density** | Height of the curve at point x | `dnorm(0)` = 0.399 |
+| `pnorm(x)` | **Probability** | Area to the left of x (cumulative probability) | `pnorm(0)` = 0.5 |
+| `qnorm(p)` | **Quantile** | The x value with p area to its left | `qnorm(0.5)` = 0 |
+| `rnorm(n)` | **Random** | n random values from the distribution | `rnorm(100)` generates 100 values |
+
+Think of these as answering different questions:
+
+- `dnorm`: "How tall is the curve here?"
+- `pnorm`: "What's the probability of getting less than x?"
+- `qnorm`: "What value of x has probability p below it?"
+- `rnorm`: "Give me random data from this distribution"
+
+### Calculating Probabilities with pnorm()
+
+The `pnorm()` function calculates cumulative probabilities - the area under the curve to the left of a value. Think of it as answering: **"What percentage of the population falls below this value?"**  It is what is called the **cumulative density function** for the normal distribution.
+
+**Intuitive Analogy**: Imagine lining up everyone in order by height. `pnorm()` tells you what percentage of people you'd have to walk past before reaching someone of a specific height.
+
+```{r}
+# Example: Test scores in a class are normally distributed
+# The mean score is 45 with a standard deviation of 5
+mu <- 45      # Population mean atest score
+sigma <- 5    # Population standard deviation
+threshold <- 50  # We want to know: what % of students scored 50 or less
+
+# pnorm calculates the cumulative probability (area to the left)
+# It answers: "What proportion of students scored below 40?"
+prob <- pnorm(threshold, mean = mu, sd = sigma)
+print(prob)
+```
+
+This means about 84.1% of students scored below 50%, only 15.9% scored above 50%.
+
+
+```{r, echo=FALSE}
+# Now let's visualize what pnorm is calculating
+# First, create a sequence of x values for plotting
+x <- seq(mu - 4*sigma, mu + 4*sigma, length.out = 200)  # From 25 to 65
+y <- dnorm(x, mean = mu, sd = sigma)  # Heights of the normal curve at each x
+df <- data.frame(x = x, y = y)  # Combine into a data frame for ggplot
+
+# Create the shaded region for all values less than 50
+shade_df <- df %>% filter(x <= threshold)  # Only keep x values below 50
+
+ggplot(df, aes(x = x, y = y)) +
+  geom_area(data = shade_df, fill = "#2E86AB", alpha = 0.5) +  # Shade the area
+  geom_line(color = "#2E86AB", size = 1.2) +  # Draw the curve
+  geom_vline(xintercept = threshold, linetype = "dashed", color = "#A23B72") +  # Mark x=50
+  annotate("text", x = threshold + 1, y = 0.06, 
+           label = paste0("P(X < 50) = ", round(prob, 3)),
+           hjust = 0, size = 4, color = "#A23B72") +
+  labs(
+    title = "Finding Probability Using pnorm()",
+    subtitle = "Test Score ~ N(45, 5): What's P(score < 50%)?",
+    x = "Test Score (%)",
+    y = "Density"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold"))
+```
+
+**Key Points about `pnorm()`**:
+
+- Always gives a number between 0 and 1
+- `pnorm(mean)` always equals 0.5 (half below, half above)
+- Larger values → probabilities closer to 1
+- Smaller values → probabilities closer to 0
+
+For probabilities to the right, use `lower.tail = FALSE`:
+
+```{r}
+# Sometimes we want P(X > some value) instead of P(X < some value)
+# Use lower.tail = FALSE to get the area to the RIGHT
+
+# What's the probability someone scores MORE than 50%?
+prob_right <- pnorm(50, mean = 45, sd = 5, lower.tail = FALSE)
+print(prob_right)
+# Notice: prob + prob_right = 1.000 (they're complements!)
+```
+
+We can also calculate the probability of an interval. We do this by subtracting. For example, what if we wanted to know what percent of people scored between 40 and 50.  We can calculate the first the probability that people scored below 50%.  Then we calculate the probability that they scored below 40.  When we subtract these two, we get the probability that they fall in the middle.  
+
+```{r}
+# For intervals, we need to subtract two probabilities
+# Example: What % of people have approval between 40% and 50%?
+prob_below_50 <- pnorm(50, mean = 45, sd = 5)  # P(X < 50)
+prob_below_40 <- pnorm(40, mean = 45, sd = 5)  # P(X < 40)
+prob_interval <- prob_below_50 - prob_below_40  # P(40 < X < 50)
+print(round(prob_interval, 3))
+```
+
+The probability is about 68.3%.  
+
+**Visualization**: To see this visually, think about what `pnorm` calculates when we put in 50 and what it looks like when we put in 40. When we subtract one from the other, we get the interval in between.
+
+
+```{r, echo=FALSE, message=FALSE}
+# Understanding Interval Probabilities: P(a < X < b)
+# =====================================================
+# When we want the probability of a value falling BETWEEN two points,
+# we can't directly calculate it. Instead, we use a clever trick:
+# P(a < X < b) = P(X < b) - P(X < a)
+
+# Example: Presidential approval ratings ~ N(45, 5)
+# Question: What percentage of people rate approval between 40% and 50%?
+
+mu <- 45      # Mean approval rating
+sigma <- 5    # Standard deviation
+
+# Step 1: Calculate P(X < 50) - everyone below 50%
+prob_below_50 <- pnorm(50, mean = mu, sd = sigma)
+#print(paste0("Step 1: P(X < 50) = ", round(prob_below_50, 3)))
+# This gives us 0.841 (84.1% of people rate below 50%)
+
+# Step 2: Calculate P(X < 40) - everyone below 40%  
+prob_below_40 <- pnorm(40, mean = mu, sd = sigma)
+#print(paste0("Step 2: P(X < 40) = ", round(prob_below_40, 3)))
+# This gives us 0.159 (15.9% of people rate below 40%)
+
+# Step 3: Subtract to get P(40 < X < 50)
+# Why subtraction? Because P(X < 50) includes everyone below 50,
+# but we only want those between 40 and 50, so we remove those below 40
+prob_interval <- prob_below_50 - prob_below_40
+#print(paste0("Step 3: P(40 < X < 50) = ", round(prob_below_50, 3), 
+ #            " - ", round(prob_below_40, 3), " = ", round(prob_interval, 3)))
+# About 68.3% have approval ratings between 40% and 50%
+
+# Note: This is approximately 68% because 40 and 50 are exactly 
+# one standard deviation below and above the mean (45 ± 5)
+# This matches the empirical rule!
+
+# Create a three-panel visualization to show the concept
+library(ggplot2)
+library(gridExtra)
+
+# Create data for plotting
+x <- seq(mu - 4*sigma, mu + 4*sigma, length.out = 200)
+y <- dnorm(x, mean = mu, sd = sigma)
+df <- data.frame(x = x, y = y)
+
+# Panel 1: P(X < 50) - Everything below 50
+p1 <- ggplot(df, aes(x = x, y = y)) +
+  geom_area(data = df %>% filter(x <= 50), 
+            fill = "#2E86AB", alpha = 0.5) +
+  geom_line(color = "#2E86AB", size = 1.2) +
+  geom_vline(xintercept = 50, linetype = "dashed", color = "red") +
+  annotate("text", x = 30, y = 0.05, 
+           label = paste0("P(X < 50) = ", round(prob_below_50, 3)),
+           size = 3, fontface = "bold") +
+  labs(title = "Step 1: Find P(X < 50)",
+       subtitle = "Cumulative probability of all values below 50",
+       x = "Test Score", y = "Density") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 12, face = "bold"))
+
+# Panel 2: P(X < 40) - Everything below 40
+p2 <- ggplot(df, aes(x = x, y = y)) +
+  geom_area(data = df %>% filter(x <= 40), 
+            fill = "#A23B72", alpha = 0.5) +
+  geom_line(color = "#2E86AB", size = 1.2) +
+  geom_vline(xintercept = 40, linetype = "dashed", color = "red") +
+  annotate("text", x = 30, y = 0.05, 
+           label = paste0("P(X < 40) = ", round(prob_below_40, 3)),
+           size = 3, fontface = "bold") +
+  labs(title = "Step 2: Find P(X < 40)",
+       subtitle = "Cumulative probability of all values below 40",
+       x = "Test Score", y = "Density") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 12, face = "bold"))
+
+# Panel 3: P(40 < X < 50) - The difference
+p3 <- ggplot(df, aes(x = x, y = y)) +
+  geom_line(color = "#2E86AB", size = 1.2) +
+  # Show the unwanted area in light gray
+  geom_area(data = df %>% filter(x <= 40), 
+            fill = "gray80", alpha = 0.3) +
+  # Show the wanted interval in blue
+  geom_area(data = df %>% filter(x >= 40 & x <= 50), 
+            fill = "#2E86AB", alpha = 0.5) +
+  # Show the upper unwanted area in light gray
+  geom_area(data = df %>% filter(x >= 50), 
+            fill = "gray80", alpha = 0.3) +
+  geom_vline(xintercept = c(40, 50), linetype = "dashed", color = "red") +
+#  annotate("text", x = 45, y = 0.05, 
+#           label = paste0("P(40 < X < 50) = ", round(prob_interval, 3)),
+#           size = 4, fontface = "bold", color = "white") +
+  annotate("text", x = 45, y = 0.03,
+           label = "68.3% in this interval",
+           size = 3, color = "black", fontface="bold") +
+  labs(title = "Step 3: Subtract to get P(40 < X < 50)",
+       subtitle = "Total probability for the interval between 40 and 50",
+       x = "Test Score", y = "Density") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 12, face = "bold"))
+
+# Combine all three panels
+grid.arrange(p1, p2, p3, ncol = 1,
+             top = "Calculating Interval Probabilities: P(40 < X < 50)")
+
+```
+
+### Finding Quantiles with qnorm() - The Inverse Problem
+
+
+```{r, echo=FALSE}
+# Let's visualize what qnorm does with a detailed plot
+x <- seq(mu - 4*sigma, mu + 4*sigma, length.out = 200)
+y <- dnorm(x, mean = mu, sd = sigma)
+df <- data.frame(x = x, y = y)
+
+# We want to find the value that has 90% below it (90th percentile)
+cutoff <- qnorm(0.90, mean = mu, sd = sigma)
+
+# Create separate shading for the two regions
+shade_below <- df %>% filter(x <= cutoff)  # 90% of data
+shade_above <- df %>% filter(x >= cutoff)  # Top 10% of data
+
+ggplot(df, aes(x = x, y = y)) +
+  geom_line(color = "#2E86AB", size = 1.2) +
+  geom_area(data = shade_below, fill = "#2E86AB", alpha = 0.2) +
+  geom_area(data = shade_above, fill = "#A23B72", alpha = 0.5) +
+  geom_vline(xintercept = cutoff, linetype = "dashed", color = "#A23B72") +
+  annotate("text", x = cutoff + 13, y = 0.06, 
+           label = "qnorm(0.90) tells us\nthis value",
+           hjust = 1, size = 4, fontface="bold") +
+  annotate("text", x = mu +2, y = .004,
+           label = "90% of area",
+           size = 3.4, color = "#2E86AB", fontface="bold") +
+  annotate("text", x = cutoff + 2.9, y = 0.004,
+           label = "10% of area",
+           size = 3.4, color = "#A23B72", fontface = "bold") +
+  labs(
+    title = "qnorm() Finds the Value That Cuts Off a Given Probability",
+    subtitle = paste0("qnorm(0.90) = ", round(cutoff, 1), 
+                     " - this value has 90% of the distribution below it"),
+    x = "Test Score",
+    y = "Density"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold"))
+```
+
+The `qnorm()` function is the **inverse** of `pnorm()`. It is something called a **quantile function** for the normal distribution. This confuses many students, so let's break it down:
+
+**pnorm() asks**: "Given a value, what's the probability below it?"
+
+**qnorm() asks**: "Given a probability, what value has that much below it?"
+
+**Think of it like this:**
+
+- `pnorm()` is like asking: "If someone is 6 feet tall, what percentile are they?"
+- `qnorm()` is like asking: "What height represents the 90th percentile?"
+
+**Another way to think about it:**
+
+- `pnorm()`: Value → Probability (forward direction)
+- `qnorm()`: Probability → Value (reverse direction)
+
+Let's see how `pnorm` and `qnorm` are inverses of each other
+
+```{r}
+mu <- 45      # Test scores with  mean 45
+sigma <- 5    # and standard deviation 5
+
+# Start with a specific test value
+original_value <- 48  # Someone with score of 48
+
+# Step 1: Use pnorm to find what percentile this person is at
+# "What percentage of people have score of 48 or below?"
+prob <- pnorm(original_value, mean = mu, sd = sigma)
+print(prob)
+```
+
+We can see that about 72.6% of students scored below 48.  
+
+We use `qnorm` to convert back from percentile to score.  We ask, "What score corresponds to the 72.6th percentile?"
+
+```{r}
+back_to_value <- qnorm(prob, mean = mu, sd = sigma)
+print(back_to_value)
+```
+
+They're inverses - we get back where we started!
+
+**Common qnorm() Applications:**
+
+There are three common ways we use `qnorm`.  
+
+1. We use it to find specific percentils?
+2. We use it to find important "cutoffs."
+3. We use it to find important middle ranges.
+
+
+**Finding specific quantiles**
+
+Let's go back to our test example.  What is the 75th percentile for this test?  That is, what score would you need to have to score aboe 75% of other students?
+```{r}
+percentile_75 <- qnorm(0.75, mean = mu, sd = sigma)  
+print(percentile_75)
+```
+
+
+**Finding "cutoffs"**
+
+I can use this same idea to find important cutoffs at both the top and the bottom of the distribution.  For instance, let's say that I want to find all of the students in the class in the top 10%. I just need to find the "cutoff" that divides the top 10% from the bottom 90%.  Since `pnorm` by default calculates probabilities *below* a quantile we can just do:
+
+```{r}
+top_10_cutoff <- qnorm(0.90, mean = mu, sd = sigma)
+print(round(top_10_cutoff, 2))
+```
+
+Now I would just look for any student who scored higher than this threshold!
+
+**Finding symmetric intervals**
+
+Sometimes we might want to find symmetric intervals around the mean that include a certain percentage of the distribution.  For instance, we might ask, "What range contains the middle 90% of scores?"  Using the same ideas as before, we just calculate the following.
+
+```{r}
+# Middle 90% means 5% in each tail, so 5th and 95th percentiles
+lower_5 <- qnorm(0.05, mean = mu, sd = sigma)  # 5th percentile
+upper_95 <- qnorm(0.95, mean = mu, sd = sigma)  # 95th percentile
+print(paste0("Middle 90% of scores: ", round(lower_5, 1), " to ", round(upper_95, 1)))
+```
+
+
+
+### Understanding dnorm(): The Height of the Curve
+
+While `pnorm()` gives us probabilities (areas), `dnorm()` is the **density function** - the height of the normal curve at any point. This doesn't directly give us a probability, but it's useful for:
+
+- Drawing normal distributions
+- Understanding where the curve is tallest (at the mean)
+
+```{r}
+# Simple example: Plot a normal distribution with mean=45, sd=5
+mu <- 45
+sigma <- 5
+
+# Step 1: Create a sequence of x values
+# We need points along the x-axis where we'll calculate the height
+x <- seq(from = mu - 4*sigma,   # Start at 4 SDs below mean (40)
+         to = mu + 4*sigma,      # End at 4 SDs above mean (160)
+         length.out = 100)       # Use 100 points for smooth curve
+
+# Step 2: Calculate the height (density) at each x value using dnorm()
+y <- dnorm(x, mean = mu, sd = sigma)
+
+# Step 3: Create a data frame for ggplot
+df <- data.frame(x = x, y = y)
+
+# Step 4: Plot the normal distribution
+ggplot(df, aes(x = x, y = y)) +
+  geom_line(color = "blue", size = 1.5) +  # Draw the curve
+  geom_vline(xintercept = mu,              # Add vertical line at mean
+             color = "red", 
+             linetype = "dashed", 
+             size = 1) +
+  annotate("text",                         # Add text annotation
+           x = mu + 4, 
+           y = 0.025, 
+           label = "Mean = 45\n(peak of curve)", 
+           color = "red",
+           size = 3) +
+  labs(
+    title = "Normal Distribution using dnorm()",
+    subtitle = "N(45, 5)",
+    x = "Value",
+    y = "Density (Height)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 11, color = "gray50")
+  )
+```
+
+The `dnorm()` function calculates the **probability density function** (PDF) of the normal distribution:
+
+$$f(x) = \frac{1}{\sigma\sqrt{2\pi}} e^{-\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2}$$
+
+Where:
+
+- $x$ is the value where you want the height
+- $\mu$ is the mean
+- $\sigma$ is the standard deviation
+- $e \approx 2.718$ is Euler's number
+- $\pi \approx 3.14159$
+
+This formula gives the height of the bell curve at any point $x$. But you will never have to use this formula, because R will do it for you (or I will just give you the R output you need).
+
+
+
+### Generating Random Data with rnorm()
+
+The `rnorm()` function generates random values from a normal distribution. This is incredibly useful for:
+
+- Simulations
+- Testing code before you have real data  
+- Understanding sampling variability
+- Bootstrap methods (advanced topic)
+
+```{r}
+# rnorm() generates random values from a normal distribution
+# Syntax: rnorm(n, mean, sd) where n is how many values you want
+
+# IMPORTANT: Set seed for reproducibility
+# Without set.seed(), you get different random numbers each time
+set.seed(123)  # Any number works - this ensures we all get the same "random" results
+
+# Generate 1000 random test scores from N(45, 5)
+n_people <- 1000
+mu<-45    # True population mean
+sigma<-5  # True population standard deviation
+
+# Generate the random sample
+random_scores <- rnorm(n = n_people, mean = mu, sd = sigma)
+print(random_scores[1:20]) # print first 20 randomly selected values
+```
+
+
+
+---
+
+## Part IV: Looking Ahead
+
+### The t-Distribution: When Samples Are Small
+
+While the normal distribution is fundamental, real-world data analysis often involves small samples where we don't know the population standard deviation. Enter the **t-distribution**:
+
+```{r, echo=FALSE}
+# Compare normal and t-distributions
+x <- seq(-4, 4, length.out = 200)
+
+df_comparison <- data.frame(
+  x = rep(x, 4),
+  y = c(dnorm(x), dt(x, df = 30), dt(x, df = 10), dt(x, df = 3)),
+  distribution = factor(rep(c("Normal", "t(df=30)", "t(df=10)", "t(df=3)"), 
+                            each = 200),
+                       levels = c("Normal", "t(df=30)", "t(df=10)", "t(df=3)"))
+)
+
+ggplot(df_comparison, aes(x = x, y = y, color = distribution)) +
+  geom_line(size = 1.2) +
+  scale_color_manual(values = c("Normal" = "#2E86AB",
+                                "t(df=30)" = "#A23B72",
+                                "t(df=10)" = "#F18F01",
+                                "t(df=3)" = "#C73E1D")) +
+  labs(
+    title = "The t-Distribution Has Thicker Tails Than Normal",
+    subtitle = "As degrees of freedom increase, t approaches normal",
+    x = "Value",
+    y = "Density",
+    color = "Distribution"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    legend.position = "right"
+  )
+```
+
+Key points about the t-distribution:
+
+- **Thicker tails** = more probability for extreme values
+- **Degrees of freedom (df)** = n - 1 for most applications
+- As df increases, t-distribution → normal distribution
+- Used for hypothesis testing with small samples (coming soon!)
+
+
+
+---
+
+## Summary
+
+We've built the mathematical foundation for statistical inference:
+
+1. **Probability** quantifies uncertainty using numbers from 0 to 1
+2. **Discrete distributions** assign probabilities to countable outcomes
+3. **Continuous distributions** describe probabilities over ranges
+4. The **normal distribution** is central to statistics - symmetric, bell-shaped, and determined by μ and σ
+5. **Z-scores** standardize values to "standard deviations from mean"
+6. The **empirical rule** gives quick probability estimates (68-95-99.7)
+7. R functions (`pnorm`, `qnorm`, `dnorm`) make probability calculations straightforward and are the cumulative distribution function (CDF), quantile function, and probability density function (PDF) for the normal distribution.
+
+This foundation enables us to move from describing what we see in our data to making inferences about populations, testing hypotheses, and quantifying uncertainty. When we combine this what what we have already learned about sampling distributions, we are now ready to start doing statistics.
+
+## Study Questions for Probability and Probability Distributions
+
+### Understanding Probability Concepts
+
+1. What is probability? What values can a probability take, and what do those values mean?
+
+2. When rolling two dice, why is 7 the most likely sum? How many ways can you get a sum of 7 versus a sum of 2?
+
+3. Explain the difference between discrete and continuous probability distributions.
+
+4. Why is the probability of getting exactly 51.7% in a continuous distribution technically 0? What question should we ask instead?
+
+### Parameters vs. Statistics
+
+5. What's the difference between μ and x̄? Between σ and s? Why do we use different symbols?
+
+6. A pollster surveys 1,000 voters and finds that 52% support a candidate. Is 52% a parameter or a statistic? What about the true support level among all voters?
+
+
+### The Normal Distribution
+
+7. List three key properties of the normal distribution.
+
+8. What two parameters completely determine a normal distribution? How do changes in each parameter affect the shape?
+
+9. TRUE or FALSE: In a normal distribution, the mean, median, and mode are all equal. Explain why.
+
+### Z-Scores and Standardization
+
+10. If someone's test score has a z-score of -1.5, what does this tell you about their performance?
+
+11. Convert these values to z-scores:
+    - X = 85, μ = 75, σ = 10
+    - X = 60, μ = 75, σ = 10
+    
+12. If approval ratings are N(45, 8), what z-score corresponds to an approval rating of 53%?
+
+### The Empirical Rule
+
+13. State the empirical rule (68-95-99.7 rule). What assumption must be true for this rule to apply?
+
+14. If test scores follow N(70, 10), use the empirical rule to find approximately:
+    - What percentage of students score between 60 and 80?
+    - What percentage score above 90?
+    - What range contains the middle 95% of scores?
+
+### Working with R Functions
+
+15. Match each R function with what it calculates:
+    - `pnorm()` 
+    - `qnorm()`
+    - `dnorm()`
+    - `rnorm()`
+    
+    A. Generates random values
+    
+    B. Finds the height of the curve
+    
+    C. Finds the value given a probability
+    
+    D. Finds the probability given a value
+
+16. What does `pnorm(100, mean = 100, sd = 15)` return? Explain why without running the code.
+
+17. If `pnorm(30, mean = 25, sd = 5)` returns 0.841, what would `qnorm(0.841, mean = 25, sd = 5)` return? Explain.
+
+### Calculating Probabilities in R
+
+18. Voter turnout in a district is normally distributed with mean 55% and standard deviation 8%. Write R code to find:
+    a. The probability that turnout is less than 50%
+    b. The probability that turnout is greater than 65%
+    c. The probability that turnout is between 50% and 60%
+
+19. For the same distribution (N(55, 8)), write R code to find:
+    a. The 90th percentile of turnout
+    b. The turnout level that only 5% of elections exceed
+    c. The range that contains the middle 80% of turnout values
+
+20. A student runs this code:
+
+
+`qnorm(0.5, mean = 100, sd = 15)`
+
+Without running it, what value will it return and why?
+
+### Challenge Problems (advanced/optional/not on test)
+
+Challenge 1. Write R code to verify the empirical rule. Generate 10,000 values from N(100, 15), then calculate what percentage fall within 1, 2, and 3 standard deviations of the mean.
+
+Challenge 2. Two districts have voter turnout distributions:
+
+District A: N(60, 5)
+
+District B: N(55, 10)
+
+Which district is more likely to have turnout above 65%? Below 50%? Show your work using R code.

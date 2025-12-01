@@ -1,0 +1,220 @@
+---
+title: "DS4P: Computing confidence intervals in R"
+date: "Lab 9"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    self-contained: true
+---
+
+$~$
+
+```{r setup, include=FALSE}
+rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Learning Objectives
+
+1. Learn how to work with probability distributions in `R` using `qnorm()` and `pnorm()`
+2. Lear how to compute standard error, margin of error, and confidence intervals in `R`
+3. Learn how combine functions from `dplyr` to compute confidence intervals for multiple groups 
+
+$~$
+
+In this lab, we are going to explore how to calculate and interpret confidence intervals using R.
+
+### Working with Probability Distributions
+Before moving on to confidence intervals, let’s first review the concept of probability distributions.
+
+#### `qnorm()`
+First, a quantile is the point on a probability distribution that marks a certain percentage of the data below that point. For example, the 0.975 quantile means that 97.5% of the observations fall below that point, and only the top 2.5% lie above it.
+
+Each quantile corresponds to a specific z-score, which tells us how many standard deviations a value is away from the mean in a standard normal distribution. For example, the 0.975 quantile corresponds to a z-score of 1.96, meaning that a value 1.96 standard deviations above the mean leaves 97.5% of the data below it and only 2.5% above it.
+
+By using qnorm() function, we can derive the z-score of the normal distribution that corresponds to a certain probability. 
+
+If I want to know the z-score that corresponds to the quantile where 97.5% of the observations fall below that point, I can use the qnorm() function to find it.
+
+We use qnorm() because it returns the cutoff value (z-score) for a given cumulative probability in a normal distribution. In other words, qnorm(0.975) tells us the z-score whose left-tail area under the standard normal curve equals 97.5% — which is 1.96.
+
+```{r}
+qnorm(p = 0.975, mean = 0, sd = 1)
+```
+
+#### `pnorm()`
+If we want to know the probability that corresponds to a specific z-score, we can use the pnorm() function. This function gives us the cumulative probability up to that z-score — in other words, the area under the normal curve to the left of that point. For example, pnorm(1.96) returns approximately 0.975, meaning that 97.5% of the observations fall below a z-score of 1.96.
+
+```{r}
+pnorm(q = 1.959964, mean = 0, sd = 1)
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+library(ggplot2)
+
+z_cut <- qnorm(0.975)   # 1.96 (97.5th quantile)
+
+x  <- seq(-4, 4, by = 0.01)
+y  <- dnorm(x, mean = 0, sd = 1)
+df <- data.frame(x = x, y = y)
+
+df_fill <- subset(df, x <= z_cut)
+
+ggplot(df, aes(x = x, y = y)) +
+geom_area(data = df_fill, aes(x = x, y = y), alpha = 0.6, fill = "green") +
+geom_line(size = 1) +
+geom_vline(xintercept = z_cut, size = 1, linetype ="dashed", color = "blue") +
+labs(x = "Z-Score", y = "Density") +
+coord_cartesian(xlim = c(-4, 4), ylim = c(0, 0.42)) +
+theme_minimal()
+```
+
+### Constructing confidence intervals 
+#### GSS - Are you worried that AI will replace many jobs?
+Let’s dive deeper into calculating confidence intervals using real data!
+In this class material and the upcoming lab session worksheet, we will explore the General Social Survey (GSS) — a large-scale dataset that includes a wide range of questions and is publicly available through NORC at the University of Chicago.
+The newest version (2024) was recently released, containing a rich set of individual-level variables that allow you to explore relationships between multiple factors if you are interested in conducting research at the individual level.
+
+Here, we will examine how many people are actually worried about AI taking over many jobs in the US. We will use the variable `aiworry`, which asks respondents whether they are worried that AI will replace many jobs currently done by humans.
+
+The response options are:
+
+1. Very worried
+2. Somewhat worried
+3. Neither worried nor unworried
+4. Not very worried
+5. Not at all worried
+
+There are 1,546 responses in total. To simplify this variable, we will recode it so that those who answered “very worried” or “somewhat worried” are coded as 1, and all others as 0.
+Some respondents chose “don’t know”, “no answer”, or were not shown this question; these cases will be handled during preprocessing.
+
+```{r, warning = FALSE, message = FALSE}
+library(haven)
+library(dplyr)
+data <- read_dta("GSS2024.dta")
+
+data_clean <- data %>%
+  dplyr::select(id, aiworry) %>% # 
+  filter(!is.na(aiworry)) %>% # Remove observations where aiworry is missing! 
+  mutate(ai_worry_binary = case_when(aiworry %in% c(1, 2) ~ 1,            
+                                     aiworry %in% c(3, 4, 5) ~ 0))
+
+table(data_clean$ai_worry_binary)
+```
+
+#### Step 1: Compute the sample mean 
+First, we need to calculate the sample mean. Remember, a confidence interval begins with a point estimate of the parameter we care about. Here, we’re interested in the proportion of people who are worried about AI replacing jobs. Because this is a binary variable, the sample mean is the sample proportion—it tells us what fraction of respondents are “worried” out of the total.
+
+```{r}
+summary(data_clean$ai_worry_binary)
+
+# Mean of the sample
+sample_mean <- mean(data_clean$ai_worry_binary)
+sample_mean
+```
+
+#### Step 2: Compute the standard error 
+Second, we need to calculate the standard error. Remember that the formula to compute standard error is $\frac{s}{\sqrt{n}}$, where $s$ is the standard deviation of the sample, and $n$ is the size of the sample, which is the number of row in our dataset. 
+```{r}
+# Standard deviation of the sample
+s <- sd(data_clean$ai_worry_binary)
+
+# Total number of observations
+n <- nrow(data_clean)
+
+# Standard error
+se <- s/sqrt(n)
+```
+
+#### Step 3: Find the z-score
+Third, find the z-score that corresponds to your desired confidence interval. For example, if we want to compute the 95% confidence interval, we will going to take $1 - \frac{(1-0.95)}{2} = 1-0.025 = 0.975$. 
+
+This formula shows that we want the cumulative probability that leaves 5% of the total area in the two tails, keeping the middle 95% of the normal distribution.
+Since the distribution is symmetric, half of that 5% lies in each tail.
+To find the cutoff value (z-score) for the upper boundary of this central region, we look for the point that leaves 97.5% of the data below it.
+In other words, we are finding the 0.975 quantile of the standard normal distribution—the z-score whose cumulative probability is 0.975, which equals 1.96.
+
+```{r}
+z_score <- qnorm(p = 0.975, mean = 0, sd = 1) 
+
+z_score 
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+z_lo <- qnorm(0.025)   # -1.96
+z_hi <- qnorm(0.975)   # +1.96
+
+x  <- seq(-4, 4, by = 0.01)
+y  <- dnorm(x, mean = 0, sd = 1)
+df <- data.frame(x = x, y = y)
+
+df_fill <- subset(df, x >= z_lo & x <= z_hi)
+
+ggplot(df, aes(x = x, y = y)) +
+  geom_area(data = df_fill, aes(x = x, y = y), alpha = 0.6, fill = "green") +
+  geom_line(size = 1) +
+  geom_vline(xintercept = c(z_lo, z_hi), size = 1, linetype = "dashed", 
+             color = "blue") +
+  labs(x = "Z-Score", y = "Density") +
+  coord_cartesian(xlim = c(-4, 4), ylim = c(0, 0.42)) +
+  theme_minimal(base_size = 14)
+```
+
+#### Step 4: Compute the margin of error. 
+We have the z-score from Step 3. Now, we will multiply it by the standard error from Step 2.
+
+This step gives us the margin of error, which represents how far our sample estimate (such as a mean or proportion) could reasonably be from the true population value. In other words, the standard error tells us how much our estimate tends to vary across samples
+
+```{r}
+margin_of_error <- se * z_score 
+```
+
+#### Step 5: Add and subtract the margin of error from the sample mean 
+To obtain the range of the confidence interval, subtract and add the margin of error (calculated in Step 4) to the sample mean. By adding and subtracting this margin of error, we can determine the range of the estimated proportion of people who are worried about AI replacing human jobs.
+```{r}
+# lower range of CI 
+lower_range <- sample_mean - margin_of_error
+
+# upper range of CI 
+upper_range <- sample_mean + margin_of_error
+
+lower_range
+upper_range
+```
+
+Thus, the 95% confidence interval is [0.656, 0.702]
+
+### Alternative step
+We can also construct the confidence interval using one line of code. 
+```{r}
+qnorm(p = c(0.025, 0.975), 
+      mean = sample_mean, 
+      sd = se)
+```
+
+- p = c(0.025, 0.975) means we’re asking for the 2.5th and 97.5th percentiles, which define the boundaries of a 95% confidence interval.
+- mean = sample_mean centers the interval around your sample estimate.
+- sd = se scales the spread of the interval according to the standard error.
+
+So, this code calculates the lower and upper limits of the 95% confidence interval — the range where we expect the true population mean (or proportion) to fall with 95% confidence.
+
+### Combining with `dplyr` function
+You can create a clean summary table using dplyr functions.
+
+```{r}
+out <- data_clean %>%
+  summarise(mean = mean(ai_worry_binary), 
+            sd = sd(ai_worry_binary), 
+            n = n(), 
+            standard_error = sd/sqrt(n), 
+            z_score = qnorm(p = 0.975), 
+            margin_of_error = standard_error * z_score, 
+            lower_margin = mean - margin_of_error, 
+            upper_margin = mean + margin_of_error)
+
+out
+```
+
+Once you have the results, carefully interpret what they mean and consider what they reveal about people’s concerns about AI in today’s world.
+
+In the upcoming lab session, you will explore other variables in this survey dataset—such as people’s satisfaction with their work.

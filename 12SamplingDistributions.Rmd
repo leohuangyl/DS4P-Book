@@ -1,0 +1,384 @@
+# From Samples to Inference: Estimates, Estimators, and Sampling Distributions
+
+## Learning Objectives
+
+1. Understand what estimates and estimators are and how they differ from population parameters
+2. Learn the three key properties of good estimators: unbiasedness, consistency, and efficiency
+3. Understand what a sampling distribution is and how it differs from sample and population distributions
+4. Grasp the Central Limit Theorem and its implications for statistical inference
+5. Master the notation and terminology for parameters, estimators, and estimates
+
+## What Is This For?
+
+In political science, we rarely have data on entire populations. We can't survey every American voter, interview every member of Congress throughout history, or measure democracy levels in every country at every point in time. Instead, we work with samples - subsets of the population we're interested in.
+
+But how do we move from what we observe in our sample to claims about the broader population? How confident can we be that the average Biden approval rating in our survey reflects the true sentiment of all Americans? This session introduces the theoretical foundation that makes this leap possible.
+
+We'll start with a fundamental question: When we calculate a statistic from our sample (like a mean), how close is it likely to be to the true population value? The answer involves understanding estimators, their properties, and the remarkable patterns that emerge when we think about all possible samples we could have drawn. By the end, you'll understand why statistical inference works and be ready to quantify uncertainty in your estimates.
+
+## Learning note
+
+Below, we include R code that we are using to illustrate our points. Some of this is fairly advanced - too advanced for this class. This is there to show you that the plots we are showing you can be generated using the simple tools of random sampling. But don't worry too much about the code for now.  Focus on the concepts we are trying to teach in the text.  We'll return to (some of) the R issues later in the class in more details.
+
+
+## The Fundamental Problem: Parameters We Can't See
+
+Let's start with a concrete question that matters for understanding American politics: What percentage of Americans approve of the the democratic nominee for President? Since we will be working from data from 2020, the specific question is: What percentage of Americans approve of Joe Biden? 
+
+This seems like a simple question, but it highlights a fundamental challenge in statistics. The true population parameter - let's call it μ (the Greek letter "mu") - represents the actual average Biden feeling thermometer rating among all American adults. This is a fixed number that exists in reality. But we can't observe it directly because we can't survey all 300+ million American adults.
+
+Instead, we have a sample. Let's load the 2020 American National Election Study (ANES) data and explore:
+
+```{r, message=FALSE}
+# Load necessary packages
+library(tidyverse)
+
+# Load the ANES 2020 data
+anes2020 <- read.csv("anes2020.csv")
+
+# Look at the Biden feeling thermometer
+summary(anes2020$biden.th)
+
+# How many respondents do we have?
+n_respondents <- sum(!is.na(anes2020$biden.th))
+cat("We have Biden ratings from", n_respondents, "respondents\n")
+
+# Calculate our sample mean
+sample_mean <- mean(anes2020$biden.th, na.rm = TRUE)
+cat("Sample mean Biden rating:", round(sample_mean, 2))
+```
+
+Now here's the key insight: Our sample mean of about 49.4 is not the same as the true population parameter μ. It's our best guess, but it's just one possible value we could have gotten. If we had surveyed a different 8,000 Americans, we would have gotten a different number.
+
+This gap between what we can calculate (sample statistics) and what we want to know (population parameters) is the fundamental problem of statistical inference. Let's introduce some notation to keep things clear:
+
+- **μ** (mu) = true population mean (unknown)
+- **x̄** (x-bar) = sample mean (what we calculated)
+- **σ** (sigma) = true population standard deviation (unknown)  
+- **s** = sample standard deviation (what we can calculate)
+
+## Estimators: Rules for Making Guesses
+
+An **estimator** is simply a rule or formula for calculating an estimate from data. Think of it as a recipe: given some data, an estimator tells you how to combine those ingredients to produce an estimate.
+
+The sample mean is one estimator, but it's not the only one. Let's explore different ways we could estimate the population's average Biden rating:
+
+```{r}
+# Different estimators for central tendency
+biden_clean <- na.omit(anes2020$biden.th)
+
+# Estimator 1: Sample mean (uses all data)
+est1_sample_mean <- mean(biden_clean)
+
+# Estimator 2: Sample median (uses middle value)
+est2_sample_median <- median(biden_clean)
+
+# Estimator 3: First observation only
+est3_first_obs <- biden_clean[1]
+
+# Estimator 4: Largest value in sample
+est4_maximum <- max(biden_clean)
+
+# Estimator 5: Mean of first 10% of observations
+n_10pct <- floor(length(biden_clean) * 0.1)
+est5_partial_mean <- mean(biden_clean[1:n_10pct])
+
+# Compare our estimates
+cat("Estimator 1 (Sample mean):", round(est1_sample_mean, 2), "\n")
+cat("Estimator 2 (Sample median):", round(est2_sample_median, 2), "\n")
+cat("Estimator 3 (First observation):", est3_first_obs, "\n")
+cat("Estimator 4 (Maximum):", est4_maximum, "\n")
+cat("Estimator 5 (10% mean):", round(est5_partial_mean, 2), "\n")
+```
+
+These estimators give us very different estimates! Some seem reasonable, others ridiculous. But they're all valid estimators in the technical sense - they're all rules for producing a number from data.
+
+The crucial insight: **An estimator is the rule; an estimate is the number you get when you apply that rule to your specific sample.**
+
+## Properties of Good Estimators
+
+What makes some estimators better than others? We evaluate estimators based on three key properties.
+
+### Unbiasedness: Right on Average
+
+An estimator is **unbiased** if it produces the correct answer on average across all possible samples. This doesn't mean it's right in any particular sample, just that it's not systematically too high or too low.
+
+To illustrate this concept, let's do something we normally can't do in real research: pretend our ANES data is the entire population, then repeatedly sample from it.  Then we can see how well each estimator does on average.  
+
+```{r}
+# Treat our ANES data as the "population"
+population <- biden_clean
+true_mean <- mean(population)
+cat("'True' population mean:", round(true_mean, 2), "\n\n")
+
+# Take many samples and apply different estimators
+n_simulations <- 1000
+sample_size <- 500
+
+# Storage for results
+results_mean <- numeric(n_simulations)
+results_median <- numeric(n_simulations)
+results_max <- numeric(n_simulations)
+results_first <- numeric(n_simulations)
+
+# Simulation loop
+set.seed(123)  # For reproducibility
+for (i in 1:n_simulations) {
+  # Draw a random sample
+  sample_i <- sample(population, size = sample_size, replace = FALSE)
+  
+  # Apply different estimators
+  results_mean[i] <- mean(sample_i)
+  results_median[i] <- median(sample_i)
+  results_max[i] <- max(sample_i)
+  results_first[i] <- sample_i[1]
+}
+```
+
+What the code above does is sample 500 observations from the larger survey (where we have 8,000) observations and then repeats that process 1,000 times. So now we have 1,000 *estimates* to look at using four different "recipes:" the sample mean, the median, the maximum observation, and the first observation.  In essence, we are imagining conducting 1,000 different surveys (each with a sample size of 500).  We can then look at how each "recipe" performs.
+
+For bias, we are particularly interesting at how accurate each estimate is on average. Specifically, we want to know how the mean estimate approximates the "true" parameter 49.24.
+
+
+```{r}
+# Compare average performance
+cat("Average across all samples:\n")
+cat("Sample mean estimator:", round(mean(results_mean), 2), 
+    "(Bias:", round(mean(results_mean) - true_mean, 2), ")\n")
+cat("Sample median estimator:", round(mean(results_median), 2), 
+    "(Bias:", round(mean(results_median) - true_mean, 2), ")\n")
+cat("Maximum estimator:", round(mean(results_max), 2), 
+    "(Bias:", round(mean(results_max) - true_mean, 2), ")\n")
+cat("First observation estimator:", round(mean(results_first), 2), 
+    "(Bias:", round(mean(results_first) - true_mean, 2), ")\n")
+```
+
+Here we see that the arithmetic mean (x-bar) and the strategy of just using the first person in our sample are both highly accurate on average -- they are unbiased.  The other choices, however, are biased. The median is a bit too high on average and the maximum is way off.
+
+We can visualize this by plotting a histogram of the estiamtes from each of our 1,000 samples.  
+
+```{r}
+par(mfrow = c(2, 2))
+
+hist(results_mean, breaks = 30, main = "Sample Mean (Unbiased)", 
+     xlab = "Estimate", xlim = c(0, 100))
+abline(v = true_mean, col = "red", lwd = 2)
+
+hist(results_first, breaks = 30, main = "First Observation (Unbiased but noisy)", 
+     xlab = "Estimate", xlim = c(0, 100))
+abline(v = true_mean, col = "red", lwd = 2)
+
+hist(results_median, breaks = 30, main = "Sample Median (Nearly Unbiased)", 
+     xlab = "Estimate", xlim = c(0, 100))
+abline(v = true_mean, col = "red", lwd = 2)
+
+hist(results_max, breaks = 30, main = "Maximum (Biased)", 
+     xlab = "Estimate", xlim = c(0, 100))
+abline(v = true_mean, col = "red", lwd = 2)
+```
+
+Notice that the sample mean and first observation estimators are centered on the true value (unbiased), while the median and the maximum estimators are systematically too high (biased).
+
+### Efficiency: Less Variable
+
+We also have a preference for estimators that are less noisy. In the language of statistics, we want estimators that ahave less variance.  This is **efficiency**. Estimators with lower variance are called more efficient.  Even though both the sample mean and the "first observation" estimator are unbiased, look at how differently they perform in terms of efficiency.
+
+```{r}
+# Compare variance of unbiased estimators
+cat("Standard deviation of estimates (n = 500):\n")
+cat("Sample mean:", round(sd(results_mean), 2), "\n")
+cat("First observation:", round(sd(results_first), 2), "\n")
+cat("\nThe sample mean is about", 
+    round(sd(results_first)/sd(results_mean), 1), 
+    "times more efficient!\n")
+```
+
+Think about this intuitively: the sample mean uses all the information in your data, while the first observation throws away 99.8% of it. More information → less uncertainty → more efficiency.
+
+
+### Consistency: Better with More Data
+
+An estimator is **consistent** if it gets closer to the true value as sample size increases. When the sample size approaches infinity, its accuracy is guaranteed. For unbiased estimators, if they become more efficient as the sample size increases they are also consistent. In our example, only the mean (x-bar) and median are consistent, although we tend to prefer the mean because it is also unbiased.
+
+
+## The Magic of Sampling Distributions
+
+Now we come to one of the most important concepts in statistics: the **sampling distribution**. Understanding this concept is crucial because it bridges the gap between the single sample we have and the claims we want to make about the population.
+
+### What Is a Sampling Distribution?
+
+A **sampling distribution** is the distribution of values we would get if we calculated our statistic (like a sample mean) from many possible samples of a given size from the population.
+
+Here's the key idea: Imagine you could take thousands of different samples from the American public, each with 500 people. Each sample would give you a slightly different average Biden approval rating. If you collected all these different sample means and made a histogram, that would be the sampling distribution of the sample mean.
+
+Think of it this way. When you flip a coin once, you get heads or tails. But if you flip a coin 10 times and count the heads, you might get 3, 4, 5, 6, or 7 heads. If you repeat this "flip 10 times and count" process thousands of times, the distribution of those counts is like a sampling distribution.
+
+In our Biden approval example one sample of 500 people might give a mean rating of 48.2. Another sample of 500 different people might give 50.7. Yet another might give 49.1. The sampling distribution describes the pattern of all these possible sample means. It tells us: (i) what values are most likely (usually clustered around the true population mean); (ii) How much variability to expect (how spread out the sample means are); (iii) the shape of this variability (remarkably, it's usually bell-shaped!).
+
+### Why This Matters
+
+The sampling distribution is mostly theoretical - in real research, we only get one sample. So why do we care about all these hypothetical other samples?
+
+Because the sampling distribution allows us to answer the critical questions about the world using only the sample we have. Even though we only have one sample mean, if we understand the sampling distribution, we can say things like: "If the true population mean were 45, it would be very unlikely to get a sample mean as high as 52". In later classes, sampling distibutions are what we use to create key quantities like confidence intervals and p-values. Indeed, this is the foundation of every confidence interval and hypothesis test you'll ever see. The sampling distribution transforms a single number (our sample statistic) into a statement about uncertainty and probability.
+
+### Distinguishing Three Types of Distributions
+
+This is where many students get confused, so let's be crystal clear about the three different distributions we're dealing with:
+
+#### 1. Population Distribution
+
+**What it is**: The distribution of the variable across every single individual in the entire population.
+
+**In our example**: If we could measure the Biden feeling thermometer for all 300+ million American adults and make a histogram, that would be the population distribution.
+
+**Key features**: This is what we're trying to learn about, but we almost never see this distribution (because we can't measure everyone). But it also has fixed parameter we are interested in: a true mean (μ) and true standard deviation (σ). In addition, its shape could be anything - normal, skewed, bimodal, etc.
+
+#### 2. Sample Distribution
+
+**What it is**: The distribution of the variable in your actual data - the one sample you collected.
+
+**In our example**: The histogram of Biden ratings from the 8,000 people in our ANES survey.
+
+**Key features**: This is what we actually observe, but it's an imperfect reflection of the population distribution.  It also has statistics we can calculate: sample mean (x̄) and sample standard deviatio (s). If the sample is big enough, its shape is usually simiilar to the population, but with random variation.
+
+#### 3. Sampling Distribution
+**What it is**: The distribution of a sample statistic (like the mean) across all possible samples of a given size.
+
+**In our example**: If we took millions of different samples of 500 Americans each and calculated the mean Biden rating **for each sample**, the histogram of all those means would be the sampling distribution.
+
+**Key features**: This is a theoretical construct (we imagine it, we don't observe it). Each "data point" is a sample statistic, not an individual observation and it it describes how much our estimate varies from sample to sample. Thanks to the central limit theorem (discussed next), its shape is approximately normal for large samples.  It also has a mean equal to the population parameter and a standard deviation called the **standard error**.
+
+#### A Concrete Analogy
+
+Think of it like studying student heights at WashU:
+
+1. **Population distribution**: A histogram showing the height of every single WashU student. 
+2. **Sample distribution**: A histogram showing the heights of the 200 students you actually measured
+3. **Sampling distribution**: A histogram showing the average heights from thousands of different groups of 200 students
+
+The critical insight: The population and sample distributions are about individual measurements. The sampling distribution is about the behavior of our estimator across many hypothetical samples.
+
+## The Central Limit Theorem: Nature's Gift to Statistics
+
+Here's where things get almost magical. The **Central Limit Theorem (CLT)** tells us that:
+
+> For large samples, the sampling distribution of the sample mean is approximately normal, regardless of the shape of the population distribution.
+
+This is remarkable! Even though Biden ratings are bimodal (people tend to love or hate him), the sampling distribution of the mean is bell-shaped. Let's demonstrate this with different population distributions:
+
+```{r}
+# Demonstrate CLT with different population shapes
+set.seed(126)
+
+# Create different population distributions
+# Uniform distribution
+pop_uniform <- runif(10000, min = 0, max = 100)
+
+# Exponential (very skewed) distribution  
+pop_skewed <- rexp(10000, rate = 1/30)
+pop_skewed <- pmin(pop_skewed, 100)  # Cap at 100
+
+# Bimodal distribution (like our Biden data)
+pop_bimodal <- c(rnorm(5000, mean = 20, sd = 10), 
+                 rnorm(5000, mean = 80, sd = 10))
+pop_bimodal <- pmax(pmin(pop_bimodal, 100), 0)  # Keep between 0-100
+
+# Function to demonstrate CLT
+demonstrate_clt <- function(population, pop_name, n = 500, n_samples = 1000) {
+  sample_means <- replicate(n_samples, mean(sample(population, n)))
+  
+  par(mfrow = c(1, 2))
+  
+  # Population distribution
+  hist(population, breaks = 50, main = paste(pop_name, "Population"),
+       xlab = "Value", probability = TRUE)
+  
+  # Sampling distribution
+  hist(sample_means, breaks = 30, main = paste("Sampling Distribution of Mean"),
+       xlab = "Sample Mean", probability = TRUE)
+  
+  # Add normal curve
+  curve(dnorm(x, mean = mean(sample_means), sd = sd(sample_means)), 
+        add = TRUE, col = "red", lwd = 2)
+}
+```
+
+```{r}
+demonstrate_clt(pop_uniform, "Uniform")
+demonstrate_clt(pop_skewed, "Skewed")  
+demonstrate_clt(pop_bimodal, "Bimodal")
+```
+
+The CLT tells us specifically that:
+
+$$\bar{x} \sim N\left(\mu, \frac{\sigma^2}{n}\right)$$
+
+Or in words: the sample mean follows a normal distribution with:
+
+- **Center**: The true population mean (μ)
+- **Spread**: The population variance divided by sample size (σ²/n)
+
+The standard deviation of the sampling distribution has a special name: the **standard error**.
+
+$$SE(\bar{x}) = \frac{\sigma}{\sqrt{n}}$$
+
+## From Theory to Practice: Estimating the Standard Error
+
+There's one catch: we don't know σ (the population standard deviation). But we can estimate it with the sample standard deviation (s).  That is, we jsut "plug in" our sample statistics and assume they are good enough. This is the foundation of confidence intervals, which we'll cover soon!
+
+## Notation Summary
+
+Let's consolidate all the notation we've introduced:
+
+| Concept | Population | Sample | Sampling Distribution |
+|---------|------------|--------|----------------------|
+| Mean | μ (unknown) | x̄ (calculated) | μ (center of sampling dist.) |
+| Standard deviation | σ (unknown) | s (calculated) | σ/√n (standard error) |
+| Variance | σ² (unknown) | s² (calculated) | σ²/n |
+
+Key notation principles:
+
+- Greek letters (μ, σ) = population parameters (usually unknown)
+- Roman letters (x̄, s) = sample statistics (what we calculate)
+- Hats (μ̂, σ̂) = estimates of population parameters
+
+## Summary: The Big Picture
+
+We started with a simple question: How can we learn about a population from just a sample? The answer involves several key ideas:
+
+1. **Estimators are recipes** - They tell us how to calculate estimates from data
+2. **Good estimators have nice properties** - Unbiased (right on average), consistent (better with more data), efficient (low variance)
+3. **Sampling distributions describe uncertainty** - They show how our estimate would vary across different samples
+4. **The CLT makes inference possible** - It tells us the sampling distribution is approximately normal, centered on the true population mean, and with variation we can approximate.
+5. **Standard errors quantify precision** - They measure how much our estimate typically varies
+
+These concepts form the foundation for all statistical inference. In the next class, we'll use these ideas to construct confidence intervals and test hypotheses.
+
+## Study Questions
+
+### Conceptual Understanding
+
+1. Explain the difference between a parameter, an estimator, and an estimate using the Biden approval example.
+
+2. You calculate the mean age from a random sample of 100 WashU students and get 20.3 years. Is 20.3 a parameter, an estimator, or an estimate? What about the rule "sum all ages and divide by n"?
+
+3. Why can the sample maximum never be an unbiased estimator of the population mean?
+
+4. Explain in your own words what it means for an estimator to be consistent. Give an example of an estimator that is unbiased but not consistent.
+
+5. Two estimators are both unbiased and consistent. How would you choose between them?
+
+### Sampling Distributions
+
+6. What is the difference between a sample distribution and a sampling distribution? 
+
+7. If you increase sample size from 100 to 400, by what factor does the standard error decrease? Explain why.
+
+8. The CLT says the sampling distribution of x̄ is approximately normal. What three things do we need to know to fully describe this normal distribution?
+
+### Application
+
+9. You survey 200 voters and find 55% support a candidate. Your friend surveys a different 200 voters and finds 51% support. Should you be surprised by this difference? (Hint: think about the standard error)
+
+10. A researcher studying county-level poverty rates decides to estimate the national rate using only the poorest county's rate. What properties will this estimator have? Is it useful?
+

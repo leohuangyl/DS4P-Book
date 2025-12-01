@@ -1,0 +1,412 @@
+# Subsetting
+
+## Learning Objectives
+
+1. Learn what subsetting means and why it's essential for data analysis
+2. Master three approaches to subsetting: bracket notation, the `subset()` function, and `dplyr` functions
+3. Understand how to filter rows based on conditions using logical operators
+4. Learn how to select specific columns from a data frame
+5. Practice combining row and column selection to extract exactly the data you need
+
+## What Is This For?
+
+In the previous session, we learned how to load data into R and understand its basic structure. But real-world data analysis rarely uses an entire dataset as-is. Instead, we need to focus on specific parts of our data -- perhaps we only want to analyze data from certain countries, or we need to examine relationships between specific variables. This process of extracting portions of your data is called **subsetting**.
+
+Subsetting is fundamental to everything you'll do in data analysis. Whether you're cleaning messy data, creating visualizations for specific groups, or preparing data for statistical analysis, you'll need to master the art of selecting exactly the data you need. Think of subsetting as using a precision tool rather than a sledgehammer - it allows you to work with exactly the right piece of data for your specific question.
+
+## Creating a Practice Dataset
+
+To learn subsetting, we'll create a small dataset that's easy to work with and verify our results. This dataset contains information about eight people's favorite colors, flavors, and their ages:
+
+```{r}
+data <- data.frame(
+  colors  = c("Green","Blue","Blue","Red","Green","Blue","Red","Red"),
+  flavors = c("Chocolate","Vanilla","Mint","Mint","Vanilla","Chocolate","Vanilla","Mint"),
+  ages    = c(16, 20, 21, 21, 13, 15, 22, NA)
+)
+
+rownames(data) <- c("Jack","Mia","Josh","Kush","Isabel","Alex","Peter","Max")
+data
+```
+
+Notice that this dataset has 8 observations (rows) and 3 variables (columns). We've also assigned row names to make it easier to refer to specific people. Note that Max's age is recorded as `NA`, which means it's missing - this is common in real data and we'll learn how to handle it.
+
+## Method 1: Subsetting with Square Brackets
+
+The most fundamental way to subset data in R uses square brackets: `data[rows, columns]`. This notation might look strange at first, but it follows a simple pattern:
+
+- The first position (before the comma) specifies which rows you want
+- The second position (after the comma) specifies which columns you want
+- Leaving either position empty means "give me all"
+
+Let's see this in action:
+
+```{r}
+# Get data for Mia and Josh (all columns)
+data[c("Mia", "Josh"), ]
+```
+
+Notice how we left the column position empty (after the comma), which means "all columns". We used `c()` to combine multiple row names.
+
+```{r}
+# Get just the flavors column (all rows)
+data[, "flavors"]
+```
+
+Here we left the row position empty (before the comma), which means "all rows". But notice something important: R returned a vector, not a data frame! This automatic simplification can sometimes cause problems in your code.
+
+### Keeping the Data Frame Structure
+
+When you select a single column, R tries to be helpful by simplifying the result to a vector. But sometimes you need to keep the data frame structure. Use `drop = FALSE` to prevent this simplification:
+
+```{r}
+# Keep flavors as a one-column data frame
+data[, "flavors", drop = FALSE]
+```
+
+### Combining Row and Column Selection
+
+You can specify both rows and columns to get very specific subsets:
+
+```{r}
+# Get Mia and Josh's favorite flavors
+data[c("Mia", "Josh"), "flavors", drop = FALSE]
+```
+
+### Using Numbers Instead of Names
+
+If your data doesn't have row names (or you don't know them), you can use row numbers:
+
+```{r}
+# Get rows 2 and 3
+data[c(2, 3), ]
+```
+
+## Using Logical Conditions to Filter Rows
+
+One of the most powerful features of subsetting is the ability to select rows based on conditions. To do this effectively, we need to understand logical operators.
+
+### Understanding Logical Operators
+
+Logical operators compare values and return `TRUE` or `FALSE`:
+
+```{r}
+# Comparison operators
+21 > 20   # greater than
+21 < 20   # less than
+21 >= 21  # greater than or equal to
+21 <= 21  # less than or equal to
+21 == 21  # exactly equal to
+21 != 20  # not equal to
+```
+
+**Important distinction**: 
+- Use `=` (or `<-`) to assign values to variables
+- Use `==` to test if two values are equal
+
+### Filtering Rows with Conditions
+
+We can use these logical operators to create conditions that filter our data. The `$` operator extracts a column as a vector:
+
+```{r}
+# Which people are exactly 21 years old?
+data$ages == 21
+```
+
+This creates a logical vector with `TRUE` for rows where the condition is met. We can use this to subset:
+
+```{r}
+# Get data for people who are exactly 21
+data[data$ages == 21, ]
+```
+
+### Combining Multiple Conditions
+
+Use `&` (AND) when both conditions must be true:
+
+```{r}
+# People who are at least 21 AND like Red
+data[data$ages >= 21 & data$colors == "Red", ]
+```
+
+Use `|` (OR) when at least one condition must be true:
+
+```{r}
+# People who like Green OR Vanilla
+data[data$colors == "Green" | data$flavors == "Vanilla", ]
+```
+
+## Method 2: The subset() Function
+
+While bracket notation is fundamental, R provides the `subset()` function to make subsetting more readable. It lets you refer to column names directly without using `$`:
+
+```{r}
+# Get rows where color is Green
+subset(data, colors == "Green")
+```
+
+### Selecting Specific Columns with subset()
+
+The `subset()` function has a `select` parameter for choosing columns:
+
+```{r}
+# Select only the ages column
+subset(data, select = ages)
+```
+
+Note that inside `select`, you use bare column names (no quotes). Even when selecting one column, `subset()` returns a data frame, not a vector.
+
+You can select multiple columns:
+
+```{r}
+# Select colors and ages columns
+subset(data, select = c(colors, ages))
+```
+
+Or exclude columns using a minus sign:
+
+```{r}
+# Keep all columns except ages and colors
+subset(data, select = -c(ages, colors))
+```
+
+### Combining Row and Column Operations
+
+You can filter rows and select columns in one command:
+
+```{r}
+# Get colors and ages for people who like Vanilla
+subset(data, flavors == "Vanilla", select = c(colors, ages))
+```
+
+### Handling Missing Values
+
+Real data often contains missing values. Here's how to exclude rows with missing ages:
+
+```{r}
+# Remove rows where age is NA
+subset(data, !is.na(ages))
+```
+
+The `!` means "not", so `!is.na(ages)` means "ages is not NA".
+
+## Method 3: Modern Subsetting with dplyr
+
+The `dplyr` package provides a modern, readable approach to data manipulation. Its functions are designed to work together in a pipeline using the `%>%` operator (pronounced "pipe").
+
+First, let's load the package:
+
+```{r, message=FALSE}
+library(dplyr)
+```
+
+### Understanding the Pipe Operator
+
+The pipe (`%>%`) takes the output from the left side and passes it as the first argument to the function on the right side. Think of it as "then":
+
+```{r}
+# Traditional approach
+filter(data, colors == "Red")
+
+# Pipeline approach: "Take data, THEN filter it"
+data %>% 
+  filter(colors == "Red")
+```
+
+### Filtering Rows with filter()
+
+The `filter()` function selects rows based on conditions:
+
+```{r}
+# Keep only adults (age >= 18)
+data %>% 
+  filter(ages >= 18)
+```
+
+### Selecting Columns with select()
+
+The `select()` function chooses which columns to keep:
+
+```{r}
+# Keep only colors and ages columns
+data %>% 
+  select(colors, ages)
+```
+
+### Chaining Operations
+
+The real power of dplyr comes from chaining multiple operations:
+
+```{r}
+# First filter for adults, then select only colors
+data %>%
+  filter(ages >= 18) %>%
+  select(colors)
+```
+
+This reads naturally: "Take the data, filter for ages 18 and up, then select just the colors column."
+
+### Complex Conditions
+
+You can use all the logical operators we learned earlier:
+
+```{r}
+# Complex filtering with parentheses for clarity
+data %>%
+  filter((ages >= 21 & colors == "Red") | flavors == "Vanilla") %>%
+  select(colors, flavors, ages)
+```
+
+## Important Considerations
+
+### Saving Your Subsets
+
+Remember that printing a subset doesn't save it. If you need to use the subset later, assign it to a new object:
+
+```{r}
+# This just prints but doesn't save
+data %>% 
+  filter(flavors == "Vanilla")
+
+# This saves the subset for later use
+vanilla_lovers <- data %>% 
+  filter(flavors == "Vanilla")
+
+# Now we can use it
+mean(vanilla_lovers$ages, na.rm = TRUE)
+```
+
+### Pipes Don't Modify the Original Data
+
+A common misconception is that pipes modify your original data. They don't - unless you explicitly assign the result:
+
+```{r}
+# This doesn't change 'data'
+data %>% 
+  filter(ages >= 21)
+
+# Check - original data is unchanged
+nrow(data)  # Still 8 rows
+```
+
+To save changes, you must assign:
+
+```{r}
+# Create a new dataset with only adults
+adults <- data %>% 
+  filter(ages >= 18)
+
+# Or overwrite the original (be careful!)
+# data <- data %>% filter(ages >= 18)
+```
+
+## Which Method Should You Use?
+
+Each subsetting method has its place:
+
+- **Bracket notation `[,]`**: Best when you need precise control or are working with matrices
+- **`subset()`**: Good for quick, readable subsetting in base R
+- **`dplyr` functions**: Ideal for complex data manipulation pipelines
+
+For this course, we'll primarily use dplyr because:
+
+1. It's highly readable - code reads like a series of instructions
+2. It's consistent - all functions work similarly
+3. It's powerful - easy to chain complex operations
+4. It's widely used in modern data science
+
+## Common Pitfalls and How to Avoid Them
+
+### 1. Forgetting Quotes Around Character Values
+
+```{r, error=TRUE}
+# Wrong - R looks for an object named Red
+# data[data$colors == Red, ]
+
+# Correct - "Red" is a character string
+data[data$colors == "Red", ]
+```
+
+### 2. Mixing Data Types in Comparisons
+
+```{r}
+# This will never match - comparing character to number
+data$colors == 21  # All FALSE or NA
+```
+
+### 3. Not Handling Missing Values
+
+```{r}
+# This includes NA in the result
+data[data$ages > 18, ]
+
+# This explicitly removes NA values first
+data %>% 
+  filter(!is.na(ages), ages > 18)
+```
+
+## Summary
+
+Subsetting is fundamental to data analysis in R. We've learned three approaches:
+
+1. **Bracket notation**: `data[rows, columns]` - the foundation of all subsetting
+2. **subset() function**: More readable for simple operations
+3. **dplyr functions**: Modern, chainable approach for complex operations
+
+The key concepts to remember:
+- Use logical operators (`==`, `!=`, `>`, `<`, `&`, `|`) to create conditions
+- Missing values (`NA`) require special handling
+- Saving subsets requires explicit assignment with `<-`
+- Different methods suit different situations
+
+As you work with larger, more complex datasets, these subsetting skills will become second nature. Practice with different combinations of row and column selection until you're comfortable extracting exactly the data you need.
+
+## Study Questions for Data Basics 2
+
+### Understanding Subsetting Concepts
+
+1. What does "subsetting" mean in the context of data analysis? Why is it important?
+
+2. In the bracket notation `data[rows, columns]`, what does it mean to leave one position empty?
+
+3. What's the difference between getting `data[, "flavors"]` and `data[, "flavors", drop = FALSE]`? When would you use each?
+
+### Logical Operators and Conditions
+
+4. What's the difference between `=` and `==` in R?
+
+5. Write a logical expression that would find all people in our dataset who are teenagers (ages 13-19).
+
+6. What's the difference between `&` (AND) and `|` (OR) when combining conditions?
+
+7. How would you select all people who are NOT 21 years old?
+
+### Using subset()
+
+8. What are the two main parameters of the `subset()` function and what does each do?
+
+9. How do you exclude columns using `subset()`? Give an example.
+
+10. Why don't you use quotes around column names inside `subset()`'s `select` parameter?
+
+### Working with dplyr
+
+11. What does the pipe operator `%>%` do? How would you read it in plain English?
+
+12. What's the dplyr equivalent of `subset(data, ages >= 21)`?
+
+13. Write a dplyr pipeline that: (a) removes rows with missing ages, (b) keeps only people 18 or older, and (c) selects only the colors column.
+
+### Handling Missing Values
+
+14. How would you create a subset that excludes all rows where age is `NA`?
+
+15. What function do you use to test if a value is missing?
+
+### Common Mistakes
+
+16. Why doesn't `data %>% filter(ages >= 21)` permanently change the `data` object?
+
+17. What's wrong with this code: `data[data$flavors == Vanilla, ]`? How would you fix it?
+
+18. If you want to analyze just the Mint lovers later in your script, what must you remember to do after subsetting?

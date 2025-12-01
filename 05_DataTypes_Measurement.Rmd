@@ -1,0 +1,340 @@
+# Data Types and Levels of Measurement
+  
+## Learning Objectives
+  
+1. Understand the five basic data types in R: numeric, integer, factor, character, and logical
+2. Learn how to check and convert between different data types using R functions
+3. Master the four levels of measurement: nominal, ordinal, interval, and ratio
+4. Understand the difference between discrete and continuous variables
+5. Apply these concepts to make informed decisions about how to store and analyze your data
+
+## What Is This For?
+
+When you open a new dataset, one of your first tasks is understanding what kinds of variables you're working with. Not all data is created equal - some variables represent categories (like political party affiliation), others represent ordered rankings (like movie ratings), and still others represent precise measurements (like vote percentages). 
+
+Understanding data types and measurement levels is crucial because:
+
+- It determines which statistical analyses you can perform
+- It affects how R stores and processes your data
+- It helps you avoid common errors like trying to calculate the average political party
+- It ensures you're interpreting your results correctly
+
+Think of this as learning the "grammar" of data - just as you need to know whether a word is a noun or verb to use it properly in a sentence, you need to know whether a variable is nominal or ratio to analyze it properly.
+
+## Basic Data Types in R
+
+R recognizes several fundamental data types. Each column in your dataset can be a different type, and R needs to know which type each variable is to handle it correctly.
+
+### The Five Main Data Types
+
+**1. Numeric**: Real numbers with decimal places
+
+- Examples: 3.14, 98.6, 0.5
+- Political science example: Vote share (0.523 means 52.3% of votes)
+
+**2. Integer**: Whole numbers without decimal places
+
+- Examples: 1, 42, -10
+- Political science example: Number of Senate seats (100)
+
+**3. Character**: Text strings
+
+- Examples: "Democrat", "Republican", "Independent"
+- Political science example: Country names, survey responses
+
+**4. Factor**: Categorical data with defined levels
+
+- Like character, but R knows there are only specific possible values
+- Political science example: Region (Northeast, South, Midwest, West)
+
+**5. Logical**: TRUE/FALSE values
+
+- Only two possible values: TRUE or FALSE
+- Political science example: Whether a bill passed (TRUE) or failed (FALSE)
+
+### Why Data Types Matter
+
+Functions in R only work with appropriate data types. You can't calculate the mean of country names, and R prevents you from trying:
+
+```{r, error=TRUE}
+# This won't work - and that's good!
+countries <- c("USA", "Canada", "Mexico")
+mean(countries)
+```
+
+## Working with Data Types
+
+Let's load the movies dataset to explore data types in practice. You can find this dataset on canvas in the datasets folder.
+  
+```{r}
+# Load the movies dataset
+MovieData <- read.csv("movies.csv")
+
+# Look at the structure
+str(MovieData)
+```
+
+### Checking Data Types
+
+Use the `class()` function to check any variable's type:
+
+```{r}
+class(MovieData$title)      # Character - movie titles are text
+class(MovieData$runtime)    # Integer - runtime in whole minutes
+class(MovieData$imdb_rating)  # Numeric - ratings with decimals
+```
+
+### Converting Between Types
+
+Use functions that start with `as.` to convert between types:
+
+```{r}
+# Convert runtime from integer to numeric
+MovieData$runtime <- as.numeric(MovieData$runtime)
+class(MovieData$runtime)
+
+# But be careful - nonsensical conversions create NAs
+as.numeric("Hello")  # Can't turn text into numbers!
+```
+
+### Understanding Factors
+
+Factors are R's way of handling categorical data efficiently. They're stored as numbers internally but displayed as text:
+  
+```{r}
+# Convert genre to a factor
+MovieData$genre <- as.factor(MovieData$genre)
+
+# See the levels
+levels(MovieData$genre)
+
+# How many movies in each genre?
+table(MovieData$genre)
+```
+
+Factors are useful because:
+
+1. They prevent typos (R knows the valid categories)
+2. They save memory (stored as numbers internally)
+3. They prevent inappropriate calculations
+
+```{r, error=TRUE}
+# R won't let you do math on factors - good!
+mean(MovieData$genre)
+```
+
+## Levels of Measurement
+
+Beyond R's data types, we need to understand the **conceptual** level at which variables are measured. This determines what analyses make sense.
+
+### 1. Nominal (Categorical) Scale
+
+**Definition**: Categories with no inherent order
+
+- Can distinguish between groups
+- No meaningful ranking
+- Numbers are just labels
+
+**Examples**:
+
+- Political party affiliation (Democrat, Republican, Independent)
+- Country of origin
+- Religion
+- Movie genre
+
+**What you CAN do**: Count frequencies, find the mode
+
+**What you CAN'T do**: Calculate means, say one is "greater than" another
+
+### 2. Ordinal Scale
+
+**Definition**: Categories with a meaningful order but no consistent distance between values
+
+- Clear ranking exists
+- Distances between ranks aren't equal or known
+- Can say "more than" but not "how much more"
+
+**Examples**:
+
+- Education level (High school < Bachelor's < Master's < PhD)
+- Survey responses (Strongly disagree to Strongly agree)
+- Military ranks
+- Movie ratings (1 star to 5 stars)
+
+**What you CAN do**: Everything from nominal plus find the median, percentiles
+
+**What you CAN'T do**: Calculate meaningful means or standard deviations
+
+### 3. Interval Scale
+
+**Definition**: Ordered values with consistent, meaningful distances but no true zero
+
+- Equal intervals between values
+- Zero doesn't mean "absence of"
+- Can't make ratio statements
+
+**Examples**:
+
+- Temperature in Celsius or Fahrenheit
+- Years (2020, 2021, 2022)
+- IQ scores
+
+**Key insight**: 80°F is 20° warmer than 60°F, but it's NOT "33% warmer"
+
+### 4. Ratio Scale
+
+**Definition**: Interval scale with a true zero point
+
+- Zero means complete absence
+- All mathematical operations valid
+- Can make ratio statements
+
+**Examples**:
+
+- Income in dollars
+- Age in years
+- Vote percentage
+- Population size
+- Distance in miles
+
+**Key insight**: \$100 is twice as much as \$50 (meaningful ratio)
+
+## Discrete vs. Continuous Variables
+
+Another important distinction cuts across measurement levels:
+
+### Discrete Variables
+
+- Can only take specific, countable values
+- Gaps between possible values
+- Examples: Number of children, shoe sizes, number of wars
+
+### Continuous Variables  
+
+- Can take any value within a range
+- Infinite possible values between any two points
+- Examples: Height, time, temperature, vote percentage
+
+```{r}
+# Discrete: Number of Oscars won (can't win 2.5 Oscars)
+table(MovieData$best_pic_win)
+
+# Continuous: IMDB ratings (can be any value from 0-10)
+summary(MovieData$imdb_rating)
+```
+
+## The Information Hierarchy
+
+Think of measurement levels as an information hierarchy:
+  
+![Image Credit: GPT](images/Hierarchy.png){width=300px}
+
+**Key principle**: You can always move DOWN the hierarchy (lose information) but never UP (can't create information that wasn't collected).
+
+### Example: Income Data
+
+Imagine surveying income:
+  
+**Ratio approach**: "What was your income last year? $_____"
+
+- Can calculate exact averages, ratios, all statistics
+- Can later group into brackets if needed
+
+**Ordinal approach**: "Select your income bracket: Low / Medium / High"
+
+- Can only find which bracket is most common
+- Can NEVER recover exact income values
+- Lost information forever!
+  
+## Practical Guidelines
+  
+### Choosing How to Measure
+  
+When designing data collection:
+
+1. **Collect at the highest level possible** - you can always simplify later
+2. **Consider your analysis needs** - what statistics will you want to calculate?
+3. **Balance precision with feasibility** - will respondents know/share exact values?
+  
+### Common Pitfalls to Avoid
+  
+1. **Treating ordinal as interval**: Just because you code "Strongly Agree" as 5 doesn't mean it's 5 times more than "Strongly Disagree" (1)
+
+2. **Over-aggregating**: Converting exact ages to "Young/Old" loses valuable information
+
+3. **Wrong data type in R**: Zip codes stored as numeric (leading zeros disappear!)
+
+```{r}
+# Bad: Zip code as numeric loses leading zeros
+zip_numeric <- 01234
+zip_numeric  # Prints as 1234!
+
+# Good: Zip code as character preserves format  
+zip_character <- "01234"
+zip_character  # Keeps the leading zero
+```
+
+## Summary
+
+Understanding data types and measurement levels is fundamental to data analysis:
+
+- **R data types** determine how your computer stores and processes data
+- **Measurement levels** determine what analyses are mathematically meaningful
+- **Always collect data at the highest level possible** - you can simplify but can't add detail
+- **Match your analysis to your measurement level** to avoid nonsensical results
+
+Remember: Just because R lets you calculate something doesn't mean it's meaningful. Understanding these concepts helps you avoid the trap of "garbage in, garbage out" in your analyses.
+
+## Study Questions
+
+### Data Types in R
+
+1. What are the five main data types in R? Give an example of each from political science.
+
+2. Why does R prevent you from calculating the mean of a character variable?
+  
+3. What function do you use to check a variable's data type? What function converts a variable to numeric?
+
+4. What happens when you try to convert the text "Democracy" to numeric? Why?
+
+### Factors
+
+5. What are the advantages of using factors instead of character variables for categorical data?
+
+6. How are factors stored internally in R? How can you see this internal storage?
+
+7. If you have a factor variable for U.S. regions with levels "Northeast", "South", "Midwest", and "West", what number would R internally use to store "Midwest"?
+
+### Levels of Measurement
+
+8. What are the four levels of measurement? List them from least to most information.
+
+9. For each level of measurement, give an example NOT mentioned in the reading.
+
+10. Why can temperature in Fahrenheit not be measured on a ratio scale?
+
+11. What statistical measures are appropriate for ordinal but NOT nominal data?
+
+### Converting Between Levels
+
+12. Can you convert a nominal variable to a ratio variable? Why or why not?
+
+13. If you collected exact ages but later grouped them into "Young/Middle-aged/Old", what level of measurement did you convert FROM and TO?
+
+14. Give an example where converting from a higher to lower measurement level would be scientifically justified.
+
+### Discrete vs. Continuous
+
+15. Is the number of bills passed by Congress discrete or continuous? Why?
+
+16. Is voter turnout percentage discrete or continuous? Why?
+
+### Practical Applications
+
+17. You're designing a survey question about income. What are the trade-offs between asking for exact income (ratio) versus income brackets (ordinal)?
+  
+  18. A student codes survey responses "Strongly Disagree=1" through "Strongly Agree=5" and calculates the mean as 3.2. What's wrong with reporting "the average response was 3.2"?
+
+19. Why might you store zip codes as character variables rather than numeric, even though they're "numbers"?
+  
+  20. You have a dataset where religious affiliation is coded as: Christian=1, Jewish=2, Muslim=3, Other=4, None=5. A colleague suggests analyzing this as numeric to see if "religious affiliation increases" in your sample. What's wrong with this approach?

@@ -1,0 +1,431 @@
+# Measures of Central Tendency
+
+## Learning Objectives
+
+1. Understand what the mean is, how to calculate it, and when to use it
+2. Learn about the median as a measure of central tendency and its relationship to percentiles
+3. Discover how the mode captures the most common value in your data
+4. Compare these three measures and understand when each is most appropriate
+5. Practice calculating central tendency measures in R with real political data
+
+## What Is This For?
+
+When political scientists analyze data, one of the first questions they ask is: "What's typical?" Whether we're studying voter ages, campaign contributions, or democracy scores across countries, we need ways to summarize large amounts of information into single, meaningful numbers.
+
+Imagine you're a campaign manager trying to understand your district. You have data on thousands of voters' ages. You can't look at each individual age, so you need a summary. Should you use the average age? The middle age? The most common age? Each of these measures tells a different story, and choosing the right one can mean the difference between understanding your constituency and missing the mark entirely.
+
+These measures of central tendency -- mean, median, and mode -- are fundamental tools in data analysis. They help us:
+
+- Summarize complex datasets with simple numbers
+- Compare different groups (Are Democratic voters older than Republican voters?)
+- Detect outliers and data quality issues
+- Make informed decisions based on what's "typical"
+
+Understanding when to use each measure is crucial. As we'll see, the presence of billionaire donors can make average campaign contributions misleading, while the median might better represent a typical donor. Let's explore how these measures work and when to use each one.
+
+## The Mean: Adding It All Up
+
+### Understanding the Mean
+
+The **mean** (often called the average) is calculated by adding up all values and dividing by the number of observations. We denote it with $\bar{x}$ (pronounced "x-bar").
+
+Mathematically: $$\bar{x} = \frac{\sum_{i=1}^{n} x_i}{n}$$
+
+Where:
+
+- $x_i$ represents each individual observation
+- $n$ is the total number of observations
+- $\sum$ (sigma) means "sum up"
+
+### When to Use the Mean
+
+The mean works best for:
+
+- **Interval or ratio data** (like age, income, vote percentages)
+- **Symmetric distributions** without extreme outliers
+- When you need to account for every value in your dataset
+
+### The Mean's Achilles' Heel: Outliers
+
+The mean has a critical weakness -- it's heavily influenced by extreme values. Consider this example:
+
+```{r}
+# Typical campaign contributions
+typical_donors <- c(25, 50, 70, 100, 100, 99, 150, 200, 250)
+mean(typical_donors)
+
+# Now add one wealthy donor
+with_wealthy <- c(typical_donors, 10000)
+mean(with_wealthy)
+```
+
+One $10,000 donation changed our "typical" donation from about $116 to over $1,100! This is why news reports about "average" wealth or income can be misleading.
+
+### The Trimmed Mean: A Compromise
+
+To reduce outlier influence, we can use a **trimmed mean**, which removes a percentage of extreme values:
+
+```{r}
+# Regular mean
+mean(with_wealthy)
+
+# 10% trimmed mean (removes top and bottom 10%)
+mean(with_wealthy, trim = 0.1)
+```
+
+## The Median: Finding the Middle
+
+### Understanding the Median
+
+The **median** is the middle value when data is ordered from smallest to largest. Here's the key insight: the median is actually the 50th percentile of your data.
+
+But what's a percentile? A **percentile** tells you what percentage of observations fall below a certain value. If you score in the 90th percentile on a test, 90% of students scored the same or lower than you. The median is special because exactly 50% of observations fall above it and 50% fall below it.
+
+- For odd numbers of observations: the middle value
+- For even numbers: the average of the two middle values
+
+```{r}
+# Odd number of values
+odd_data <- c(1, 3, 5, 7, 9)
+median(odd_data)  # Middle value is 5
+
+# Even number of values
+even_data <- c(1, 3, 5, 7, 9, 17)
+median(even_data)  # Average of 5 and 7
+```
+
+### The Median and Other Percentiles
+
+Understanding the median as the 50th percentile helps us see it's part of a larger family of position measures. In R, we can find any percentile using the `quantile()` function:
+
+```{r, message=FALSE}
+library(fivethirtyeight)
+data("congress_age")
+
+# The median is the 50th percentile (0.50 quantile)
+median(congress_age$age)
+quantile(congress_age$age, probs = 0.50)
+
+# We can find other percentiles too
+quantile(congress_age$age, probs = c(0.25, 0.50, 0.75))
+```
+
+This tells us:
+
+- 25% of Congress members are younger than about 45 (25th percentile)
+- 50% are younger than about 53 (median)
+- 75% are younger than about 61 (75th percentile)
+
+### The Interquartile Range (IQR)
+
+The **Interquartile Range** captures the middle 50% of your data:
+
+IQR = 75th percentile - 25th percentile
+
+```{r}
+IQR(congress_age$age)
+```
+
+The IQR helps us understand spread and identify outliers. Values more than 1.5 × IQR beyond the quartiles are often considered outliers.
+
+### When to Use the Median
+
+The median excels when:
+
+- Data is **skewed** (has a long tail on one side)
+- There are **outliers** you can't remove
+- You have **ordinal data** (like survey responses: strongly disagree to strongly agree)
+- You want a value that's actually in your dataset (for odd n)
+
+### The Median's Robustness
+
+Unlike the mean, the median doesn't use exact values -- it only cares about their order and finds the middle of that ordering:
+
+```{r}
+# Original data
+salaries1 <- c(30000, 35000, 40000, 45000, 50000)
+median(salaries1)
+
+# Replace highest salary with CEO salary
+salaries2 <- c(30000, 35000, 40000, 45000, 5000000)
+median(salaries2)  # Still the same!
+```
+
+## The Mode: Most Common Value
+
+### Understanding the Mode
+
+The **mode** is simply the most frequently occurring value. Unlike mean and median, it can be used with any type of data, including nominal data. Remember: the mode is the value itself, not how often it appears.
+
+### Finding the Mode in R
+
+R doesn't have a built-in mode function, but we can find it using frequency tables:
+
+```{r}
+# Example: Party affiliations
+party_data <- c("Dem", "Rep", "Dem", "Dem", "Ind", "Rep", "Dem", "Rep", "Dem")
+
+# Create frequency table
+party_table <- table(party_data)
+party_table
+
+# Use sort() to order from most to least common
+sort(party_table, decreasing = TRUE)
+
+# The mode is "Dem" with 5 occurrences
+```
+
+### Finding the Mode with Numeric Data
+
+The same approach works with numbers:
+
+```{r}
+# Example: Test scores
+test_scores <- c(85, 90, 85, 75, 85, 90, 95, 90, 85, 80)
+
+# Create frequency table
+score_table <- table(test_scores)
+score_table
+
+# Sort to see which score is most common
+sort(score_table, decreasing = TRUE)
+
+# We can see that 85 appears most often (4 times)
+```
+
+Using `sort()` with `decreasing = TRUE` puts the most frequent values at the top, making it easy to identify the mode at a glance.
+
+### Bimodal Distributions
+
+When data has two modes (two peaks), it often indicates two distinct groups or polarization. This is especially relevant in political science.
+
+![This histogram shows the change in polarization in the public between 1993 and 2014](images/2.png)
+
+You can learn more about this data at [Pew Research.](https://www.pewresearch.org/politics/2014/06/12/section-1-growing-ideological-consistency/#interactive)
+
+In this visualization, we can see how public opinion has shifted from having one central peak (unimodal) to having two distinct peaks (bimodal) -- one on the left and one on the right. This bimodal pattern reveals increasing political polarization, with fewer people in the middle and more people at the ideological extremes.
+
+Bimodal distributions can indicate:
+
+- Polarization around two extremes
+- Two distinct subgroups in your data
+
+When you see a bimodal distribution, it's worth investigating what might be causing the two peaks.
+
+## Comparing the Three Measures
+
+### How Skew Affects Central Tendency
+
+The relationship between mean, median, and mode tells us about the shape of our data:
+
+- **Symmetric distribution**: Mean ≈ Median ≈ Mode
+- **Right-skewed** (tail to the right): Mode < Median < Mean
+- **Left-skewed** (tail to the left): Mean < Median < Mode
+
+![This image shows three distributions and how the mean, median, and mode relate in each case](images/Skew.png)
+
+### Detecting Skew Without Drawing the Distribution
+
+You can identify skew just by comparing the mean and median:
+
+- If mean > median: The data is likely right-skewed (positive skew)
+  - Example: Income data where most people earn modest amounts but a few earn millions
+  
+- If mean < median: The data is likely left-skewed (negative skew)
+  - Example: Age at retirement where most retire around 65 but some retire very early
+
+- If mean ≈ median: The data is likely symmetric
+  - Example: Heights in a population, test scores on a well-designed exam
+
+The mean gets "pulled" toward the tail of the distribution because it accounts for every value, while the median stays centered on the middle observation. This is why comparing these two measures is such a powerful diagnostic tool -- you can understand your data's shape without even looking at a graph!
+
+### Real Example: Congressional Ages
+
+Let's analyze the ages of U.S. Congress members to see how these measures compare:
+
+```{r}
+# Calculate mean and median
+mean(congress_age$age)
+median(congress_age$age)
+
+# For mode, we'll use whole years
+congress_age$age_years <- floor(congress_age$age)
+age_table <- table(congress_age$age_years)
+
+# Sort to find the most common age
+sort(age_table, decreasing = TRUE)
+
+# Make a simple histogram to see the shape
+hist(congress_age$age, main = "Distribution of Congressional Ages", xlab = "Age")
+```
+
+The mean (around 53.3) and median (around 53.0) are very close, which tells us the age distribution is fairly symmetric. Looking at our sorted table, we can see that ages 51 and 54 are the most common (the modes).
+
+### Using summary() for a Quick Overview
+
+R's `summary()` function provides key statistics including several percentiles:
+
+```{r}
+summary(congress_age$age)
+```
+
+This shows:
+
+- Min and Max (0th and 100th percentiles)
+- 1st Quartile (25th percentile)
+- Median (50th percentile)
+- 3rd Quartile (75th percentile)
+- Mean
+
+## Practical Guidelines
+
+### Choosing the Right Measure
+
+1. **Use the mean when:**
+   - Data is roughly symmetric
+   - You need to account for total values (e.g., total budget divided by recipients)
+   - Working with interval/ratio data without outliers
+
+2. **Use the median when:**
+   - Data is skewed
+   - There are outliers you can't remove
+   - You want a "typical" value that isn't affected by extremes
+   - Working with ordinal data
+
+3. **Use the mode when:**
+   - Working with categorical data
+   - You need the most common category
+   - Looking for peaks in continuous data
+
+### Reporting Best Practices
+
+Always consider reporting multiple measures:
+
+- For income data: Report both median (typical) and mean (affected by high earners)
+- For nominal data: Report mode and its frequency
+- For any data: Consider showing the distribution graphically (we'll cover this more next week)
+
+## Things to Look Out For
+
+### Data Entry Errors Can Change Everything
+
+The mean is particularly vulnerable to data entry mistakes. [Consider the famous case of spinach](https://www.dailymail.co.uk/sciencetech/article-2354580/Popeyes-legendary-love-spinach-actually-misplaced-decimal-point.html): for decades, people believed spinach had 10 times more iron than it actually does. Why? A misplaced decimal point in the 1870s turned 3.5 mg of iron per 100g into 35 mg. This single data entry error influenced nutritional recommendations for generations, even inspiring the creation of Popeye!
+
+In your own work, watch for:
+
+- Numbers that seem too large or small (is that salary really $50,000,000 or should it be $50,000?)
+- Decimal point errors (3.5 becoming 35 or 0.35)
+- Extra zeros (100 becoming 1000)
+
+### When Excel Errors Shape Government Policy
+
+In 2013, [economists discovered a major error](https://www.bbc.com/news/magazine-22223190) in an influential study about government debt. The researchers had accidentally excluded several countries from their Excel calculation of average GDP growth. This wasn't just an academic mistake -- governments around the world had used this study to justify austerity policies during the financial crisis.
+
+The lesson? Even professional researchers make errors, and these errors matter. 
+
+When calculating means in R:
+
+- Always check your data first with `head()` and `summary()`
+- Look for values that don't make sense
+- Document your code so others can verify your work
+
+### Special Values in Older Datasets
+
+Many datasets use special numbers to indicate missing data:
+
+- -99 or 999 for missing values
+- 0 for "not applicable"
+- -88 for "refused to answer"
+
+For example, the Polity democracy scores typically range from -10 to +10. But they use -88 for periods of government transition. If you don't remove these special values before calculating the mean, your results will be meaningless:
+
+```{r}
+# Example: Democracy scores with special values
+democracy_scores <- c(7, 8, 9, -88, 6, 7, -88, 8)
+
+# Wrong: Including the -88 values
+mean(democracy_scores)
+
+# Right: Remove special values first
+real_scores <- democracy_scores[democracy_scores != -88]
+mean(real_scores)
+```
+
+### The Takeaway
+
+Before calculating any measure of central tendency:
+
+1. **Look at your data** -- Use `summary()` to spot unusual values
+2. **Check the documentation** -- Does the dataset use special codes?
+3. **Question extreme values** -- Is that billionaire real or a data error?
+4. **Keep your original data** -- Never overwrite it, so you can always go back
+
+Remember: Good data analysis isn't just about knowing the formulas -- it's about being a detective who questions whether the numbers make sense.
+
+## Study Questions for Central Tendency
+
+### Understanding the Concepts
+
+1. What is the mean, and what symbol do we use to represent it? What does the formula $\bar{x} = \frac{\sum_{i=1}^{n} x_i}{n}$ tell us in plain English?
+
+2. Explain why the mean of a binary (0/1) variable gives us the proportion of 1s in the data.
+
+3. What is the median? How do you find it when you have an even number of observations?
+
+4. What does it mean to say the median is the "50th percentile"?
+
+5. Define the mode. Can you have more than one mode in a dataset?
+
+### Understanding Position
+
+6. What is a percentile? If someone scores in the 75th percentile, what does that mean?
+
+7. What is the Interquartile Range (IQR)? How do you calculate it?
+
+8. Using the 1.5 × IQR rule, when is a value considered an outlier?
+
+### Comparing Measures
+
+9. In a perfectly symmetric distribution, what is the relationship between the mean, median, and mode?
+
+10. If a distribution is right-skewed (long tail to the right), how do the mean and median compare? Why?
+
+11. Why is the median considered more "robust" than the mean? Give an example.
+
+12. When would the mode be the only appropriate measure of central tendency?
+
+13. What is a trimmed mean? When would you use it instead of a regular mean?
+
+### Practical Applications
+
+14. A news report says the "average American household income is $106,000." Another report says the "typical American household income is $71,000." Which measure is each report likely using, and why might they differ?
+
+15. A dataset of city populations includes New York (8 million), Los Angeles (4 million), and several cities around 100,000. Which measure of central tendency best represents a "typical" city? Why? 
+
+### Working with R
+
+16. What does `na.rm = TRUE` do in functions like `mean()` and `median()`?
+
+17. How can you find the mode using R?
+
+18. What's the difference between `median()` and `quantile(x, probs = 0.50)`?
+
+19. If you calculate `mean(c(1, 2, 3, NA))` without any additional arguments, what will R return? Why?
+
+### Interpretation
+
+20. Congressional ages have a mean of 53.3 and median of 53.0. What does this tell you about the age distribution?
+
+21. What is a bimodal distribution? What might it indicate in political data?
+
+22. If a dataset has mean = 85 and median = 65, what can you conclude about its skew?
+
+### Critical Thinking
+
+23. A politician claims their policies benefit the "average American." Why should you ask whether they mean the mean or median American?
+
+24. Why might the Popeye-spinach story be a cautionary tale about the mean?
+
+25. Calculate BY HAND the mean, median, and mode of this dataset (show your work):
+    Data: 7, 9, 7, 3, 7, 5, 9, 10, 5
+    Then verify your answers using R.

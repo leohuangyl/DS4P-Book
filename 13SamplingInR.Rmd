@@ -1,0 +1,220 @@
+# Taking Random Samples in R
+
+## Learning Objectives
+
+1. Take random samples from vectors and data frames
+2. Control randomness with `set.seed()`
+3. Use `sample()` for simple random sampling
+4. Use `dplyr` functions for sampling data frames
+5. Take samples with and without replacement
+
+## What Is This For?
+
+When working with large datasets, you often need to take random samples for analysis, testing code, or creating training/test sets. R provides several ways to randomly select observations. This tutorial covers the essential functions you'll need for sampling.
+
+## Basic Sampling from Vectors
+
+### The `sample()` Function
+
+The workhorse function for random sampling in R is `sample()`. Let's start with a simple vector:
+
+```{r}
+# Create a vector of numbers
+numbers <- 1:10
+print(numbers)
+
+# Take a random sample of 5 numbers
+sample(numbers, size = 5)
+
+# Run it again - you'll get different results!
+sample(numbers, size = 5)
+```
+
+### Key Arguments for `sample()`
+
+- `x`: The vector to sample from
+- `size`: How many elements to sample
+- `replace`: Whether to sample with replacement (default is FALSE)
+- `prob`: Optional weights for each element
+
+Note: 
+
+- If `x` is numeric, and has length of 1, then `1:x` will be used
+
+```{r}
+# Sample all elements in random order (shuffle)
+sample(numbers)
+
+# Sample with replacement (elements can appear multiple times)
+sample(numbers, size = 15, replace = TRUE)
+```
+
+## Controlling Randomness with `set.seed()`
+
+Random samples are different each time by design. But for reproducible research, you need consistent results. Use `set.seed()` to fix the random number generator:
+
+- Without set.seed - different results each time
+```{r}
+sample(1:10, size = 3)
+sample(1:10, size = 3)
+```
+
+- With set.seed - same results if you use the same seed
+```{r}
+set.seed(123)
+sample(1:10, size = 3)
+
+set.seed(123)  # Same seed = same results
+sample(1:10, size = 3)
+```
+
+**Important**: The seed number doesn't matter (123, 42, 8675309, etc.). What matters is using the *same seed* for reproducibility. 
+
+## Sampling from Data Frames
+
+### Method 1: Using Base R
+
+```{r, message=FALSE}
+# Create a small example data frame
+students <- data.frame(
+  id = 1:20,
+  name = paste0("Student", 1:20),
+  score = round(rnorm(20, mean = 75, sd = 10)),
+  year = sample(c("Freshman", "Sophomore", "Junior", "Senior"), 20, replace = TRUE)
+)
+
+# View first few rows
+head(students)
+```
+
+To sample rows from a data frame using base R, we need a little trick: randomly sample row indices and subset the data frame with it.
+
+```{r}
+# Sample 5 random rows
+set.seed(42)
+row_indices <- sample(1:nrow(students), size = 5)
+students_sample <- students[row_indices, ]
+print(students_sample)
+```
+
+### Method 2: Using dplyr (Recommended)
+
+The `dplyr` package provides cleaner functions for sampling.
+
+Similar to the `sample()` function, `sample_n()` and `sample_frac()` function accepts these arguments:
+
+- `tbl` (data.frame / tibble): A population data
+- `size` (integer): The size of a sample for `sample_n`, and the fraction of rows for `sample_frac`
+- `replace` (Boolean): Generate sample with replacement? (default = FALSE)
+- `weight`: Optional weights for each element
+
+```{r, message=FALSE}
+library(dplyr)
+```
+
+```{r}
+# sample_n: Sample a specific number of rows
+set.seed(42)
+students %>% 
+  sample_n(size = 5)
+
+# sample_frac: Sample a fraction of rows
+set.seed(42)
+students %>% 
+  sample_frac(size = 0.25)  # 25% of rows
+```
+
+## Sampling Without Replacement vs. With Replacement
+
+### Without Replacement (Default)
+
+Each observation can only be selected once (draw a ball from the urn, and do not put it back):
+
+```{r}
+# Try to sample more than available - ERROR!
+# sample(1:5, size = 10)  # This would cause an error
+
+# Maximum sample size = population size
+sample(1:5, size = 5)  # This works - it's a permutation
+```
+
+### With Replacement
+
+Observations can be selected multiple times (draw a ball and put it back into the urn):
+
+```{r}
+# Sample 10 times from 5 options
+set.seed(100)
+sample(1:5, size = 10, replace = TRUE)
+
+# Notice some numbers appear multiple times
+table(sample(1:5, size = 10, replace = TRUE))
+```
+
+## Quick Reference
+
+| Function | Purpose | Example |
+|----------|---------|---------|
+| `sample(x, n)` | Sample n items from vector x | `sample(1:100, 10)` |
+| `sample(x)` | Random permutation of x | `sample(letters)` |
+| `set.seed(n)` | Fix random number generator | `set.seed(123)` |
+| `sample_n(df, n)` | Sample n rows from data frame | `df %>% sample_n(50)` |
+| `sample_frac(df, p)` | Sample fraction p of rows | `df %>% sample_frac(0.1)` |
+
+## Summary
+
+- Use `sample()` for vectors, `sample_n()`/`sample_frac()` for data frames
+- Always use `set.seed()` for reproducible results
+- Specify `replace = TRUE` to allow repeated selections
+- Be careful with edge cases (empty vectors, size = 1)
+
+This foundation will help you work with sampling distributions, bootstrap methods, and cross-validation in more advanced analyses.
+
+## Study Questions
+
+### Understanding the Basics
+
+1. What does the `sample()` function do? What are its main arguments?
+
+2. If you have a vector `x <- 1:20` and run `sample(x, size = 5)` twice, will you get the same results? Why or why not?
+
+3. What's the difference between `sample(1:10, size = 5)` and `sample(1:10)`?
+
+4. Explain what `set.seed()` does and why it's important for reproducible research.
+
+### Sampling with and without Replacement
+
+5. What does `replace = FALSE` mean in the context of sampling? What about `replace = TRUE`?
+
+6. If you have a vector with 10 elements, what's the maximum size you can sample without replacement? With replacement?
+
+7. Write R code to simulate rolling a six-sided die 20 times.
+
+### Working with Data Frames
+
+8. What's the difference between `sample_n()` and `sample_frac()`? When would you use each?
+
+9. You have a data frame called `patients` with 1000 rows. Write code to:
+   - Take a random sample of 50 patients
+   - Take a random 10% sample of patients
+
+10. If you run this code, what happens and why?
+    ```r
+    df <- data.frame(x = 1:10, y = letters[1:10])
+    sample(df, size = 5)
+    ```
+
+### Practical Applications
+
+11. You're analyzing survey data and want to test your code on a smaller subset first. Write code to create a random sample of 100 rows from a data frame called `survey_data`.
+
+12. Explain why this code might give unexpected results:
+    ```r
+    my_sample1 <- sample(1:100, 20)
+    mean(my_sample1)
+    my_sample2 <- sample(1:100, 20)
+    mean(my_sample2)
+    ```
+    How would you fix it to ensure both samples are identical?
+
+13. What will `sample(10)` return? Is this the same as `sample(c(10))`? Explain.

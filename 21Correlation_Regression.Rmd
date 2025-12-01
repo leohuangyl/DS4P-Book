@@ -1,0 +1,473 @@
+# Correlation and Bivariate Regression
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Learning Objectives
+
+By the end of this module, you will understand:
+
+1. What correlation measures and how to interpret correlation coefficients.
+2. How correlation relates to linear regression and develop an intuition for how least squares regression works. 
+3. Learn how to fit and interpret simple regression models in R and practice visualizing relationships between two continuous variables.
+
+## What Is This For?
+
+So far in this course, we have learned how to compare outcomes across groups using tools like the difference in means and t-tests. These methods work beautifully when one of our variables is binary, defining two distinct groups like treatment and control, or Democrat and Republican. But what happens when both of our variables can take on many different values?
+
+Consider one of the most fundamental questions in political science: do voters reward incumbents when the economy performs well? This theory of economic voting suggests that when incomes rise during a president's term, voters should be more likely to support the incumbent party in the next election. 
+
+But in this analysis, both of our key variables here are continuous. Income growth might range from negative values during recessions to several percent during boom times. Vote share can range anywhere from crushing defeats below 40% to landslide victories above 60%. Forcing either variable into crude categories like "good economy" versus "bad economy" would lose crucial information about the strength of this relationship.
+
+This reading introduces two closely related tools that let us analyze relationships between continuous variables without sacrificing information: correlation coefficients and linear regression. These methods (and especially regression) form the foundation for much of modern statistical analysis in political science. 
+
+Once you understand these concepts, you will be able to explore questions about how economic conditions predict election outcomes, how campaign spending relates to vote share, or whether political knowledge increases with age. It will also prepare you for the rest of the class, which will focus exclusively on the regression modeling framework. 
+
+## Loading the Data: Economic Voting in Presidential Elections
+
+Throughout this module, we will work with real data on economic voting in U.S. presidential elections. This dataset contains information about income growth during each presidential term and the subsequent vote share received by the incumbent party. Let us load the data and explore its structure:
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Load the economic voting data
+votes <- read.csv("votes.csv")
+
+# Examine the structure
+glimpse(votes)
+```
+
+Our key variables of interest are 
+
+* `rdi4`: average annual change in real disposable income over past 4 years
+* `vote`: incumbent party vote share in the election
+
+The unit of observation in this dataset is a presidential election year. For example, the 2012 observation captures Barack Obama's first term (2008-2012), showing that real disposable income grew at an average annual rate of about 2.17% during those four years, and his Democratic Party received about 51.4% of the two-party vote when he ran for reelection.
+
+This data allows us to test a central hypothesis in political science: when the economy performs well (measured by income growth), the incumbent party should perform better at the polls. But how strong is this relationship? Can we use economic performance to predict election outcomes? These are exactly the questions that correlation and regression help us answer.
+
+## From Groups to Relationships
+
+Let us briefly review where we are coming from. When we use a t-test or calculate a difference in means, we are comparing an outcome variable across two groups. One of our variables must be binary to define these groups. This works perfectly for many research questions in political science, such as comparing voter turnout between competitive and non-competitive districts.
+
+But our economic voting question involves two continuous variables. Income growth during a presidential term can take many values, from the negative growth of severe recessions to the rapid growth of economic booms. Similarly, incumbent vote share varies continuously from devastating defeats to landslide victories. We need analytical tools that preserve and utilize all this variation.
+
+That is exactly what correlation and regression provide. These methods allow us to examine whether and how strongly two continuous variables relate to each other, and to make specific predictions about one variable based on values of another.
+
+## Correlation Coefficients
+
+### The Basic Idea
+
+A correlation coefficient gives us a single number that summarizes the linear relationship between two variables. When we say income growth and incumbent vote share are correlated, we mean that knowing income growth gives us information about the likely vote share. Higher income growth tends to go with higher vote shares (positive correlation).
+
+Remember that correlation describes association, not causation. If income growth and vote share are positively correlated, it means that knowing the economy grew helps us predict the incumbent party will likely do well. It does not *necessarily* prove that economic growth causes electoral success. Perhaps both are influenced by other factors like war, scandals, or candidate quality. Correlation tells us two variables move together; it does not tell us why.
+
+### Visualizing the Relationship
+
+Before diving into the mathematics, let us visualize our data to get an intuitive sense of the relationship:
+
+```{r}
+# Create a basic scatterplot
+plot(x = votes$rdi4, y = votes$vote, 
+     main = "Economic Voting in Presidential Elections",
+     xlab = "Average Annual Income Growth (%)",
+     ylab = "Incumbent Party Vote Share (%)",
+     ylim = c(40, 70),
+     pch = 19, col = "darkblue")
+
+# Add a grid for easier reading
+grid()
+```
+
+Looking at this scatterplot, you can already see a pattern. Elections with higher income growth (toward the right) tend to have higher incumbent vote shares (toward the top). Elections with low or negative income growth tend to see the incumbent party perform poorly. This visual pattern is exactly what correlation captures numerically.
+
+### Understanding the Correlation Coefficient
+
+The correlation coefficient, often denoted as *r*, always falls between -1 and 1. These bounds reflect the maximum possible linear relationship between two variables. A correlation of 1 means perfect positive correlation where all points fall exactly on an upward-sloping line. A correlation of -1 means perfect negative correlation where all points fall exactly on a downward-sloping line. A correlation of 0 indicates no linear relationship.
+
+In political science, you rarely see correlations near -1 or 1 because social phenomena are complex with many influencing factors. The correlation between income growth and incumbent vote share is substantial by political science standards but far from perfect, reflecting that many factors beyond the economy influence elections.
+
+### The Math Behind Correlation
+
+Now let us look at how we actually calculate a correlation coefficient. Let's call one variable (economic performande) $x$ and the other variable (incumbent vote share) $y$. The formula is:
+
+$$r = \frac{1}{n-1}\sum_{i=1}^{n}\left[\frac{(x_i - \bar{x})}{s_x} \times \frac{(y_i - \bar{y})}{s_y}\right]$$
+
+This formula may look a bit complicated, but let's break it down.  First, remember that $\bar{x}$ is the mean of the variable $x$ and $s_x$ is the standard deviation.  Likewise, $\bar{y}$ is the mean of the variable $y$ and $s_y$ is the standard deviation.  So we can break down the equation like this.
+
+For observation $i$, we can calculate how much it deviates from the mean, and divide by the standard deviation.
+$$\frac{(x_i-\bar{x})}{s_x} $$
+Then we need to do the same thing for y:
+$$\frac{(y_i-\bar{y})}{s_y} $$
+
+Then we just multiply them together.
+
+$$\frac{(x_i-\bar{x})}{s_x} \times \frac{(y_i-\bar{y})}{s_y} $$
+So when both of these numbers are positive or both are negative, this will result in a positive number. When one is positive and other is negative, it will result in a negative number.  
+
+Finally, to find the overall correlation we just have to add these up for each observation and divide by $n-1$.  
+
+$$r = \frac{1}{n-1}\sum_{i=1}^{n}\left[\frac{(x_i - \bar{x})}{s_x} \times \frac{(y_i - \bar{y})}{s_y}\right]$$
+
+Let us break this down step by step using our actual data. We will calculate the correlation manually to understand what is happening, then verify using R's built-in function.
+
+```{r}
+# Calculate means
+mean_rdi4 <- mean(votes$rdi4)
+mean_vote <- mean(votes$vote)
+
+# Calculate deviations from the mean
+votes$demean_rdi4 <- votes$rdi4 - mean_rdi4
+votes$demean_vote <- votes$vote - mean_vote
+
+# Look at a few observations to understand the pattern
+votes %>% 
+  select(year, rdi4, vote, demean_rdi4, demean_vote) %>%
+  glimpse()
+```
+
+For each observation, we calculate how far that election's income growth is from the average income growth, and how far its vote share is from the average vote share. 
+
+* When both variables are above their means (both deviations positive) or both below their means (both deviations negative), they contribute to positive correlation. 
+* When one is above and one below, they contribute to negative correlation.
+
+The next step, is we need to calculate the product of these deviations.  
+
+```{r}
+# Calculate the product of deviations
+votes$corr_contribution <- votes$demean_rdi4 * votes$demean_vote
+```
+
+Now let us complete the calculation.  To do this, we'll first calculate the standard deviations, and then complete the calculations 
+
+```{r}
+# Calculate standard deviations
+sd_rdi4 <- sd(votes$rdi4)
+sd_vote <- sd(votes$vote)
+
+# Manual calculation of correlation coefficient
+n <- nrow(votes)
+correlation_manual <- (1/(n-1)) * sum(votes$corr_contribution) / (sd_rdi4 * sd_vote)
+
+print(paste("Manually calculated correlation:", round(correlation_manual, 3)))
+```
+
+Of course, usually we don't need todo this all ourselves.  R provides a built-in function `cor()` that calculates this very easily.
+
+```{r}
+# Verify with built-in function
+correlation_builtin <- cor(votes$rdi4, votes$vote)
+round(correlation_builtin, 3)
+```
+
+The correlation of approximately 0.742 indicates a moderately strong positive relationship. In political science terms, this is quite substantial. It tells us that economic performance and electoral outcomes move together consistently, though not perfectly.
+
+### Visualizing How Correlation Works
+
+To better understand correlation, let us visualize which observations contribute to the positive correlatio.
+
+```{r, echo=FALSE}
+# Create the scatterplot with quadrants
+plot(x = votes$rdi4, y = votes$vote, 
+     main = "How Observations Contribute to Correlation",
+     xlab = "Average Annual Income Growth (%)",
+     ylab = "Incumbent Party Vote Share (%)",
+     ylim = c(40, 70),
+     pch = 19, 
+     col = ifelse(votes$corr_contribution > 0, "darkgreen", "darkred"))
+
+# Add mean lines to create quadrants
+abline(v = mean_rdi4, lty = 2, col = "gray", lwd = 2)
+abline(h = mean_vote, lty = 2, col = "gray", lwd = 2)
+
+# Add legend
+legend("topleft", 
+       legend = c("Contributes to positive correlation", "Contributes to negative correlation"),
+       col = c("darkgreen", "darkred"), 
+       pch = 19, 
+       cex = 0.8)
+
+# Add text labels for quadrants
+text(min(votes$rdi4) + 0.5, 65, "Upper Left:\nNegative contribution", cex = 0.7, col = "darkred")
+text(max(votes$rdi4) - 0.5, 65, "Upper Right:\nPositive contribution", cex = 0.7, col = "darkgreen")
+text(min(votes$rdi4) + 0.5, 43, "Lower Left:\nPositive contribution", cex = 0.7, col = "darkgreen")
+text(max(votes$rdi4) - 0.5, 43, "Lower Right:\nNegative contribution", cex = 0.7, col = "darkred")
+```
+
+Points in the upper-right quadrant (good economy, high vote share) and lower-left quadrant (poor economy, low vote share) contribute to positive correlation. These are elections where economic performance and electoral outcomes moved in the same direction. Points in the other two quadrants represent elections where the economy and electoral outcomes diverged, perhaps due to other factors like war, scandal, or candidate characteristics.
+
+## Limitations of Correlation
+
+While correlation coefficients are useful, they have important limitations that often make them insufficient for research purposes. Understanding these limitations helps us see why we need regression analysis.
+
+First, correlation coefficients do not allow us to make specific predictions. Knowing that income growth and vote share have a correlation of 0.74 tells us they are related, but it does not tell us what vote share to expect when income grows by 2%. The correlation coefficient describes the strength of the relationship but not its specific form.
+
+Second, correlation is invariant to linear transformations. If we measured income growth as a decimal (0.02) instead of a percentage (2%), the correlation would remain identical. This invariance means correlation cannot tell us about the actual scale of the relationship. How much does one percentage point of income growth actually translate into vote share? Correlation cannot answer this question.
+
+Third, correlation does not provide easily interpretable effect sizes. If a campaign strategist wants to know how much economic growth helps the incumbent party, the correlation coefficient provides limited guidance. Saying "the correlation is 0.74" does not translate into actionable predictions about how specific economic conditions might affect electoral outcomes.
+
+## From Correlation to Regression
+
+### Why We Need More Than Correlation
+
+The limitations of correlation lead us naturally to regression analysis. While correlation tells us whether and how strongly two variables relate, regression specifies the actual relationship. Regression allows us to make specific predictions, understand effect sizes in meaningful units, and communicate results in substantively interpretable terms.
+
+Consider our economic voting example. A correlation of 0.74 tells us the economy matters for elections, but it cannot answer crucial questions. If the economy grows by 3% during a presidential term, what vote share should the incumbent party expect? How much does each additional percentage point of growth help? These are the questions regression can answer.
+
+### The Regression Line Concept
+
+The key insight of regression is that we can summarize the relationship between two variables with a line. Let us add a line to our scatterplot that represents our best guess about the relationship:
+
+```{r}
+# Create scatterplot with regression line
+plot(x = votes$rdi4, y = votes$vote, 
+     main = "Economic Voting with Regression Line",
+     xlab = "Average Annual Income Growth (%)",
+     ylab = "Incumbent Party Vote Share (%)",
+     ylim = c(40, 70),
+     pch = 19, col = "darkblue")
+
+# Add the regression line (we'll explain how to calculate this soon)
+abline(lm(vote ~ rdi4, data = votes), col = "red", lwd = 2)
+
+# Add grid
+grid()
+```
+
+This red line represents our best summary of how income growth relates to vote share. For any level of economic growth, the line gives us a specific prediction for the expected vote share. But which line should we choose? We could draw many different lines through these points. We need a principled way to choose the best line.
+
+## Simple Linear Regression
+
+### The Basic Model
+
+A linear regression model expresses the relationship between two variables as a straight line plus some error:
+
+$$Y = \alpha + \beta X + \epsilon$$
+
+In our economic voting example, Y is the incumbent party vote share, X is income growth during the presidential term, α (alpha) is the intercept telling us the expected vote share when income growth is zero, β (beta) is the slope telling us how much vote share changes for each percentage point of income growth, and ε (epsilon) is the error term capturing all other factors that influence elections beyond the economy.
+
+The error term is crucial. It acknowledges that we cannot perfectly predict election outcomes from economic data alone. Many factors influence elections: candidate quality, campaign effectiveness, international events, social issues, and more. The error term captures all these other influences.
+
+### Finding the Best Line: Least Squares
+
+Given our model, we need to find the specific values of α and β that best fit our data. The most common criterion is least squares: we choose the line that minimizes the sum of squared vertical distances between the observed points and the line.
+
+Let's break that down a bit. If the actual outcome for observation $i$ is $Y_i$ and our prediction is $\hat{Y}_i = \alpha + \beta X_i$, then the prediction error is $e_i=(Y_i - \hat{Y}_i)$. (This is often called the *residual*.) The idea here is that we are going to choose the values of $\alpha$ and $\beta$ that minimize the sum of squared errors (SSE):
+
+$$SSE = \sum_{i=1}^n e_i^2 =  \sum_{i=1}^n (Y_i-\hat{Y}_i)^2 = \sum_{i=1}^n\left(Y_i - (\alpha + \beta X_i)\right)^2$$
+
+
+Let us visualize these concepts:
+
+```{r}
+# Fit the model (we'll explain the details shortly)
+model <- lm(vote ~ rdi4, data = votes)
+
+# Get predictions and residuals
+votes$predicted <- fitted(model)
+votes$residual <- residuals(model)
+
+# Create a plot showing residuals
+plot(x = votes$rdi4, y = votes$vote, 
+     main = "Residuals: Actual vs. Predicted Values",
+     xlab = "Average Annual Income Growth (%)",
+     ylab = "Incumbent Party Vote Share (%)",
+     ylim = c(40, 70),
+     pch = 19, col = "darkblue")
+
+# Add the regression line
+abline(model, col = "red", lwd = 2)
+
+# Draw residual lines for a few points to illustrate
+for(i in c(2, 5, 8, 11, 14)) {
+  segments(votes$rdi4[i], votes$predicted[i], 
+           votes$rdi4[i], votes$vote[i], 
+           col = "gray", lty = 2, lwd = 1.5)
+}
+
+# Add text
+text(3.5, 67, "Residuals shown as\ngray dashed lines", cex = 0.8)
+```
+
+The least squares method chooses α and β to minimize the sum of all these squared residuals. Why do we square them? First, squaring prevents positive and negative residuals from canceling out. Second, squaring penalizes large errors more than small ones, encouraging a line that avoids extremely bad predictions.
+
+Using calculus (which we will not derive here), we can find formulas for the values that minimize the sum of squared residuals:
+
+$$\hat{\beta} = \frac{\sum_{i=1}^{n}(X_i - \bar{X})(Y_i - \bar{Y})}{\sum_{i=1}^{n}(X_i - \bar{X})^2}$$
+
+$$\hat{\alpha} = \bar{Y} - \hat{\beta}\bar{X}$$
+
+These formulas look complex, but R calculates them for us automatically. I will only ever make you calculate these by hand one time in this class.
+
+### Fitting the Model in R
+
+The `lm()` function (short for "linear model") fits regression models in R. Let us fit our economic voting model:
+
+```{r}
+# Fit the regression model
+model <- lm(vote ~ rdi4, data = votes)
+
+# View the results
+summary(model)
+```
+
+This is a lot of output, and you won't understand all of it right away.  But we can start to understand some of it. 
+
+The intercept of 45.94 tells us that when income growth is zero (no growth), the model predicts the incumbent party will receive about 46% of the vote. This is the $\alpha$ term in the equations above.  This makes substantive sense as zero growth represents economic stagnation, which voters typically punish.
+
+The slope coefficient on `rdi4` is 2.29. This is the key finding, and corresponds to the $\beta$ term in the equation above. Intuitively, this is the *slope* of the line.  It tells us that for each additional percentage point of annual income growth, the incumbent party's vote share increases by about 2.29 percentage points. (You might remember "rise over run" from your middle school teacher?)
+
+This is a substantial effect. The difference between a recession (-2% growth) and a boom (+3% growth) would be about 11.5 percentage points in vote share, often the difference between a crushing defeat and a comfortable victory.
+
+These specific predictions illustrate the power of regression over correlation. While correlation told us the economy and elections are related, regression tells us exactly how much economic performance matters in practical terms.
+
+### Visualizing the Complete Picture
+
+Let us create a comprehensive visualization showing the data, regression line, and confidence in our predictions:
+
+```{r}
+# Create the final visualization using base R
+plot(x = votes$rdi4, y = votes$vote, 
+     main = "Economic Voting Model: Income Growth and Electoral Success",
+     xlab = "Average Annual Income Growth (%)",
+     ylab = "Incumbent Party Vote Share (%)",
+     ylim = c(40, 70),
+     pch = 19, col = "darkblue")
+
+# Add the regression line
+abline(model, col = "red", lwd = 3)
+
+# Add grid
+grid()
+```
+
+This visualization captures our complete analysis. The regression line shows the systematic relationship between economic growth and electoral outcomes. The equation provides specific predictions.
+
+We can also create this visualization using ggplot2 for a more polished appearance:
+
+```{r}
+library(ggplot2)
+
+ggplot(votes, aes(x = rdi4, y = vote)) +
+  geom_point(size = 3, color = "darkblue", alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "red", fill = "pink", alpha = 0.2) +
+  geom_hline(yintercept = 50, linetype = "dashed", color = "gray50") +
+  labs(x = "Average Annual Income Growth (%)",
+       y = "Incumbent Party Vote Share (%)",
+       title = "Economic Voting in U.S. Presidential Elections",
+       subtitle = paste("Each 1% of income growth increases vote share by 2.29 percentage points")) +
+  theme_minimal() +
+  theme(text = element_text(size = 12),
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(color = "gray30")) +
+  annotate("text", x = min(votes$rdi4) + 0.5, y = 48, 
+           label = "Incumbent loses", color = "gray50", size = 3) +
+  annotate("text", x = min(votes$rdi4) + 0.5, y = 52, 
+           label = "Incumbent wins", color = "gray50", size = 3)
+```
+
+The shaded band around the regression line represents uncertainty in our estimate. We will learn more about this when we cover statistical inference, but for now, note that the band is narrower near the center of the data (where we have more observations) and wider at the extremes.
+
+### Making Predictions
+
+One of regression's key advantages is the ability to make specific predictions. Let us use our model to predict electoral outcomes under different economic scenarios:
+
+```{r}
+# Create scenarios for prediction
+scenarios <- data.frame(
+  scenario = c("Deep Recession", "Mild Recession", "Stagnation", 
+               "Moderate Growth", "Strong Growth", "Boom"),
+  rdi4 = c(-3, -1, 0, 1.5, 3, 5)
+)
+
+# Make predictions
+scenarios$predicted_vote <- predict(model, newdata = scenarios)
+
+# Display results
+print("Electoral Predictions Under Different Economic Scenarios:")
+print(scenarios)
+
+# Visualize scenarios
+plot(x = votes$rdi4, y = votes$vote, 
+     main = "Predictions for Different Economic Scenarios",
+     xlab = "Average Annual Income Growth (%)",
+     ylab = "Incumbent Party Vote Share (%)",
+     ylim = c(35, 70),
+     xlim = c(-4, 6),
+     pch = 19, col = "darkblue")
+
+# Add regression line
+abline(model, col = "red", lwd = 2)
+
+# Add prediction points
+points(scenarios$rdi4, scenarios$predicted_vote, 
+       pch = 18, col = "darkgreen", cex = 2)
+
+# Add 50% threshold
+abline(h = 50, lty = 2, col = "gray")
+
+# Label scenarios
+text(scenarios$rdi4, scenarios$predicted_vote + 2, 
+     scenarios$scenario, cex = 0.7, col = "darkgreen")
+```
+
+These predictions show the practical importance of economic conditions for electoral outcomes. The model suggests that incumbent parties facing recessions (negative growth) are predicted to lose, while those presiding over economic growth are predicted to win. The strength of the economy can mean the difference between a narrow victory and a landslide.
+
+## Summary and Key Takeaways
+
+We have covered a lot of content in this reading, moving from correlation to regression using real data on economic voting. Let us review the key concepts.
+
+Correlation coefficients provide a single number summary of the linear relationship between two variables, ranging from -1 to 1. In our example, the correlation of 0.742 between income growth and incumbent vote share tells us these variables move together consistently. When the economy does well, incumbent parties tend to perform better electorally.
+
+However, correlation alone could not tell us how much economic growth matters in practical terms. Linear regression extends correlation by specifying the exact relationship. Our regression equation, Vote Share = 45.94 + 2.29 × Income Growth, provides concrete predictions. Each percentage point of income growth translates to about 2.29 percentage points of additional vote share for the incumbent party.
+
+We find the best-fitting regression line using the least squares criterion, minimizing the sum of squared residuals. R makes this easy with the `lm()` function, which handles all calculations and provides detailed output. The residuals remind us that while our model captures an important relationship, many other factors also influence elections.
+
+Next week, we will extend these ideas to multiple regression, where we can examine how several variables simultaneously relate to an outcome. This allows us to ask more sophisticated questions and begin to address issues of confounding and causation. For now, make sure you are comfortable with correlation and simple regression, as everything else builds from here.
+
+
+
+## Review/Study Questions
+
+### Understanding Concepts
+
+1. **What does a correlation coefficient tell us, and what does it NOT tell us?** Explain why knowing that income growth and vote share have a correlation of 0.74 is useful but limited.
+
+2. **Explain the difference between correlation and regression.** If correlation tells us the strength of a relationship, what additional information does regression provide?
+
+3. **What are residuals in a regression model?** Using the economic voting example, explain what it means when an election has a large positive residual versus a large negative error term (sometimes called a residual).
+
+4. **Why do we square the residuals when finding the best-fitting regression line?** Give two reasons why the least squares criterion uses squared distances rather than absolute distances.
+
+### Calculating and Interpreting
+
+5. **Manual Correlation Calculation**: Given these three elections:
+
+   - 1980: Income growth = -0.2%, Vote share = 44.7%
+   - 1984: Income growth = 6.0%, Vote share = 59.2%
+   - 1996: Income growth = 2.1%, Vote share = 54.9%
+   
+   Calculate which election contributes most to the *positive* correlation between income growth and vote share. Show your reasoning.
+
+6. **Interpreting Regression Coefficients**: Our model found Vote Share = 45.94 + 2.29 × Income Growth. 
+
+   - What does the intercept of 45.94 mean in practical terms?
+   - If income grows by 2.5% during a presidential term, what vote share would you predict?
+   - Is the slope coefficient of 2.29 practically significant? Explain.
+
+### Working with R
+
+7. **Model Predictions**: Using our regression model, write the R code to:
+
+   - Predict the vote share for income growth of 4%
+   - Create a new prediction for a hypothetical "perfect storm" recession with -5% growth
+
+
+### Critical Thinking
+
+8. **Model Limitations**: Let's say our model predicts that with 10% income growth, the incumbent party would receive about 68.8% of the vote. 
+
+    - Why might this prediction be unreliable? (Think about extrapolating beyond our observed data.)
+    - Name two factors other than the economy that could explain why some elections have large residuals.

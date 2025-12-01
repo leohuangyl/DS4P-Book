@@ -1,0 +1,181 @@
+# R Markdown Basics
+
+## What is R Markdown? Why R Markdown? 
+
+When you create a R Markdown document in RStudio, the template tells you the basics:
+
+> "Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents... When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document."
+
+
+More specifically, R Markdown can do the following:
+
+1. Synthesize multiple components, including text, tables, figures, code chunks, and code outputs into a single document (just like how this document is produced!);
+2. Create a fully reproducible document and support multiple output formats (HTML, PDF, and MS Word);
+3. "As an environment in which to do data science, as a modern day lab notebook where you can capture not only what you did, but also what you were thinking." ([R for Data Science](https://bookdown.org/asmundhreinn/r4ds-master/r-markdown.html))
+
+We will focus on outputs as **HTML documents** in this page. 
+
+## Prerequisites
+
+You need the **rmarkdown** package, but you don’t need to explicitly install it or load it as RStudio automatically does both when needed.
+
+## Create an R Markdown document in RStudio
+
+1. Open RStudio;
+2. Click "+" (under File) to create a document;
+3. Click "R Markdown"
+4. Enter the title and the author of the document, leave the default output as html, and click ”OK”.      
+
+```{r,echo=FALSE, out.width="40%", out.height="40%"}
+knitr::include_graphics(path = "images/creatingRMD1.png")
+```
+
+```{r,echo=FALSE, out.width="40%", out.height="40%"}
+knitr::include_graphics(path = "images/creatingRMD2.png")
+```
+
+## R Markdown Basics
+
+Here is a typical R Markdown document:
+
+```{r,echo=FALSE, out.width="70%", out.height="70%"}
+knitr::include_graphics(path = "images/sample2.png")
+```
+
+It contains three important elements:
+
+1. An (optional) **YAML header** surrounded by `---`. If there is one, it is always at the beginning of the document.
+2. **Chunks of R code** surrounded by ` ```{r} ` on the first line and 
+  ` ``` ` on the last line.
+3. Text mixed with simple text formatting like `**# heading**` and `_italics_`.
+
+## YAML Header
+You can control many other “whole document” settings by tweaking the parameters of the YAML header. You might wonder what YAML stands for: it’s “yet another markup language”, which is designed for representing hierarchical data in a way that’s easy for humans to read and write. R Markdown uses it to control many details of the output, such as document parameters and bibliography. 
+
+At this time, you only need to know that you can change the information of **title**, **author** and **date** in the YAML Header.
+
+## Code Chunks
+### Create a code chunk
+To embed/run code inside an R Markdown document, you need to insert a chunk. There are three ways to do so:
+
+1. The keyboard shortcut Cmd/Ctrl + Alt + I
+2. The “Insert” button icon in the editor toolbar.
+3. By manually typing the chunk delimiters ` ```{r} ` 
+    in the beginning and ` ``` ` in the end (another line).
+
+You run a code chunk with a shortcut `cmd/ctrl + shift + enter`.
+
+### Chunk Options
+Chunk output can be customized with options, arguments supplied to chunk header. Knitr provides almost 60 options that you can use to customize your code chunks. Here we’ll cover the most important chunk options that you’ll use frequently. See the full list at http://yihui.name/knitr/options/. 
+
+Here are some of the most important chunk arguments:
+
+- `eval = FALSE` prevents code from being evaluated (and obviously if the code is not run, no results will be generated). This is useful for displaying example code, or for disabling a large block of code without commenting each line.
+- `include = FALSE` runs the code, but doesn’t show the code or results in the final document. Use this for setup code that you don’t want cluttering your report.
+- `echo = FALSE` prevents code, but not the results, from appearing in the finished file. Use this when writing reports aimed at people who don’t want to see the underlying R code.
+- `message = FALSE` or `warning = FALSE` prevents messages or warnings from appearing in the finished file.
+- `results = 'hide'` hides printed output; `fig.show = 'hide'` hides plots.
+
+It is easy to specify these arguments, simply **delimit the arguments with a comma**. For example, if you would like to specify `warning = FALSE` and `echo = TRUE`, you can specify: ` ```{r, warning = FALSE, echo = TRUE}`. Remember to end the chunk in a new line 
+with ` ``` `.
+
+
+## Text formatting
+Another essential component of a R Markdown document is plain text (like the text in this sentence!). Text formatting in R Markdown is not as straightforward as MS Word or Google Docs, but it is not difficult. 
+
+Here are some important text formatting:
+
+- **Bold text**: Try `**Bold**` or `__Bold__`
+- **Italic text**: Try `*italic*` or `_italic_` 
+- **code**: Try `` `code` `` to make the text look like R code like `this`.
+- **math symbols**: Use `$`:
+    - Try `$y=ax+b$` for inline math
+    - Try `$$y=ax+b$$` for formula that take up a row (and centered)
+    - See [this page](https://rpruim.github.io/s341/S19/from-class/MathinRmd.html) for more math symbols (**this will be useful!**).
+- **superscript and subscript**: Try `x^2^` and `x~2~` (2 will be superscripted/subscripted).
+- **Line break**: **Insert an empty line = line break**; To add extra line breaks, add `<br>` in another new lines _(note that it only works in html output)_.
+
+--------------------------------------
+
+Headings:
+
+- 1st level header `# Heading`
+- 2nd level header `## Heading`
+- 3rd level header `### Heading`
+
+Note: Don't leave a space or indentation before all the `#`s!
+
+--------------------------------------
+
+Bulleted lists:
+
+- `- item 1`
+- `- item 2`
+    - `- item 2a` (Use two tab indentations here)
+    - `- item 2b` (Use two tab indentations here)
+        + `item 2b-1` (Use two tab indentations here)
+        + `item 2b-2` (Use two tab indentations here)
+  
+_(Besides starting with_ `-`, `*` _and_ `+`
+_also works)_. 
+  
+Ordered lists:
+
+1. `1. item 1`
+2. `2. item 2`
+    a. `a. item 2a` (Use two tab indentations here)
+    b. `b. item 2b` (Use two tab indentations here)
+
+## Include a plot generated from R code
+R has a number of built-in tools for basic visualizations such as histograms, scatterplots, bar charts, boxplots and much more. Rather than going through all the different types, we will focus on the basic scatterplot.
+
+We use the `plot()` command to generate a simple scatterplot as shown below:
+
+```{r}
+## Create two vectors for plotting:
+age <- c(10,12,14,17,19,21,25)
+height <- c(150,160,165,175,177,178,178)
+
+## A scatterplot with age on the x axis and height on the y axis;
+## Specify different arguments to enrich the plot, such as `main=` to add a title, `xlab` to add a x-axis label, `ylab` to add a y-axis label
+plot(age, height, main="Scatterplot", xlab="Age", ylab="Height")
+```
+
+Look at [this page](http://www.sthda.com/english/wiki/scatter-plots-r-base-graphs) for more details of scatterplots!
+
+## Get the Output
+
+Once if you finish typesetting the document or you would like to preview your output document, click the **Knit** button on the editor toolbar. 
+
+```{r,echo=FALSE, out.width="40%", out.height="40%"}
+knitr::include_graphics(path = "images/knitbutton.png")
+```
+
+## Advanced Topic: Include a Local Image
+
+You can also include images (like jpegs or PNG files) in your document.  But to do that, you need to be sure you can point R to the correct path.  That is, you need to tell R where the image is stored on your computers.  If you do not know how to find the path for a file, we'll come back to that later.
+
+
+You can do that using the markdown language like this: 
+
+`![Input a caption for the image](local path for the image){width=250px}`.
+
+Note that you do not need to use any quotation marks here. 
+
+You can also do this with R code using the `knitr` package. For example, we can use the following R code: 
+
+```{r, out.width="60%", out.height="60%", fig.cap="**Sentiment Analysis of Taylor Swift's songs**"}
+knitr::include_graphics(path = "images/SATS.png")
+```
+
+This assumes that the file `SATS.png` is stored in a subdirectory called `images`.
+
+Note that:
+
+1. The `path=` argument specifies a local path where the image is stored.
+2. You need to use quotation marks if you use R code to display local images.
+
+## References
+1. The website "R for Data Science": https://r4ds.had.co.nz/r-markdown.html
+2. Plotting: https://hbctraining.github.io/Intro-to-R/lessons/basic_plots_in_r.html
+

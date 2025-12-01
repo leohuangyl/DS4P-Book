@@ -1,0 +1,242 @@
+# Two-Sample Hypothesis Testing: Comparing Means Between Groups
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Comparing Means: The Next Level
+
+Up until now, we've been stuck in a one-sample world. We've learned how to test whether the mean of our sample is different from some hypothesized value. That's useful, but let's be honest—it's not where the real action is in social science research.
+
+The questions that really keep us up at night aren't about comparing our data to some theoretical benchmark. Instead, we want to know things like: Does studying actually help you get better grades? Do attack ads really make people less likely to vote for a candidate? Does drinking coffee make you more productive, or does it just make you *think* you're more productive?
+
+These are all questions about comparing two groups. And that's exactly what we're going to learn how to do today.
+
+## What Information Goes Into Comparing Means?
+
+When we compare two groups, we need to know four basic things about our data:
+
+1. The mean for sample 1 ($\bar{y}_1$)
+2. The mean for sample 2 ($\bar{y}_2$)
+3. The standard deviation for sample 1 ($S_1$)
+4. The standard deviation for sample 2 ($S_2$)
+
+Oh, and we also need to know how many observations we have in each group ($n_1$ and $n_2$). That's going to matter a lot, as we'll see in a minute.
+
+## The Hypothesis Testing Framework
+
+Here's the wonderful thing: the basic logic of hypothesis testing doesn't change just because we have two groups. We're still using the same fundamental formula:
+
+$$\text{Test Statistic} = \frac{(\text{Estimate} - \text{Null})}{\text{Standard Error}}$$
+
+What's different is what goes into each piece. Our estimate is now the difference between the two sample means: $(\bar{y}_1 - \bar{y}_2)$. The null hypothesis is usually that this difference equals zero—in other words, that there's no real difference between the groups. And the standard error... well, that's where things get interesting.
+
+## The Tale of Two Formulas
+
+Here's where sample size becomes crucial. If both your samples are reasonably large (let's say n > 30), life is good. The Central Limit Theorem has your back, and you can use this relatively simple formula for the standard error:
+
+$$SE = \sqrt{\frac{S_1^2}{n_1} + \frac{S_2^2}{n_2}}$$
+
+This is basically saying: the uncertainty in the difference comes from the uncertainty in each group's mean, and we add them together (well, we add the variances and then take the square root, but you get the idea).
+
+But what if you have small samples? Now things get trickier. With small samples, we can't count on the Central Limit Theorem to make everything normal. Instead, we will use the t-distribution (implicitly assuming that the data is normal), and we use something called the pooled variance:
+
+$$\hat{\sigma}^2 = \frac{(n_1-1)S_1^2 + (n_2-1)S_2^2}{n_1+n_2-2}$$
+
+This is essentially a weighted average of the two sample variances. We then use this to calculate our standard error:
+
+$$SE = \hat{\sigma}\sqrt{\frac{1}{n_1} + \frac{1}{n_2}}$$
+
+And instead of using the normal distribution, we use the t-distribution with $n_1 + n_2 - 2$ degrees of freedom.
+
+## Putting It All Into Practice
+
+Let's walk through the process step by step:
+
+**Step 1: Assumptions**  
+First, figure out if you're in the large sample or small sample world. If either group has fewer than 30 observations, you're in small sample territory.
+
+**Step 2: State Your Hypotheses**  
+The null hypothesis is almost always that the means are equal: $H_0: \mu_1 - \mu_2 = 0$. The alternative is that they're different: $H_a: \mu_1 - \mu_2 \neq 0$ (though sometimes you might have a specific direction in mind).
+
+**Step 3: Calculate the Test Statistic**  
+Take the difference in sample means and divide by the standard error. Which standard error formula you use depends on your sample size.
+
+**Step 4: Find the P-value**  
+For large samples, use `pnorm()`. For small samples, use `pt()` with the appropriate degrees of freedom. Don't forget to multiply by 2 for a two-sided test!
+
+**Step 5: Make Your Decision**  
+If the p-value is less than your significance level (usually 0.05), reject the null. Otherwise, fail to reject.
+
+## A Real Example: Can Social Pressure Get Out the Vote?
+
+Enough with the formulas—let's see this in action with some real data! We're going to analyze a fascinating experiment about voting and social pressure.
+
+
+
+### Gerber, Green, & Larimer GOTV Data 
+
+We are going to discuss an experiment on social pressure.  (We will talk about this more when we talk about causality.)  [Here is a link to the data](https://isps.yale.edu/research/data/d001). 
+
+In 2006, one of three mailers was sent out as part of a study to voters.  There were three different kinds of messages:
+
+- Civic Duty (It's your duty to vote)
+- Hawthorne (You're being studied so go vote)
+- Neighbors (Your neighbors will know if you voted)
+
+First let's read in the data and look at it:
+```{r, eval=T, warning=FALSE, message=FALSE}
+# Load our tools
+library(dplyr)
+
+
+social <- 
+  read.csv("https://raw.githubusercontent.com/kosukeimai/qss/master/CAUSALITY/social.csv")
+
+# Take a peek
+social %>% 
+  glimpse()
+```
+
+
+Let's see what messages were sent out:
+```{r}
+social %>% 
+  count(messages)
+```
+
+So we have a control group that got nothing, and three different treatment messages. That's a lot to keep track of, so let's simplify things by combining all the treatment groups together:
+```{r}
+# Create a simple treatment vs control variable
+social <- social %>%
+  mutate(messages2 = case_when(
+    messages %in% c("Hawthorne", "Civic Duty", "Neighbors") ~ "Treatment",
+    messages == "Control" ~ "Control"
+  ))
+
+# Check our work
+social %>% 
+  count(messages2)
+```
+
+## Running Our First T-test
+
+Now for the moment of truth. Did these messages actually work? Let's find out:
+```{r}
+t.test(primary2006 ~ messages2, 
+       alternative = "two.sided",
+       var.equal = FALSE, 
+       data = social)
+```
+
+Whoa! Look at that t-statistic: -23.869. That's huge! And the p-value is basically zero (2.2 × 10^-16 is scientific notation for "really, really, really small"). 
+
+What does this tell us? The treatment groups had significantly different turnout than the control group. In fact, looking at the sample means, the control group had about 29.7% turnout while the treatment groups had about 31.9% turnout. That might not sound like much, but in the world of voter mobilization, a 2.2 percentage point increase is a big deal!
+
+## Understanding the t.test() Function
+
+The `t.test()` function in R is pretty flexible. Let me show you some options:
+
+**For different hypotheses:**  
+You can change the `alternative` argument depending on what you're testing. Use `"two.sided"` when you just want to know if the groups are different (this is usually what you want). Use `"greater"` or `"less"` if you have a specific direction in mind.
+
+**For variance assumptions:**  
+The `var.equal` argument tells R whether to assume the two groups have equal variance. I recommend always using `var.equal = FALSE` unless you have a really good reason not to. It's the safer choice. But note that the formula I taught you above is for when the variances are equal (just because the math is easier).
+
+## Comparing Specific Treatments
+
+What if we want to dig deeper and compare specific treatments to each other? Let's see if the "Neighbors" treatment (the aggressive one) was more effective than the "Civic Duty" treatment (the gentle one):
+```{r}
+# Extract just the voters who got these two treatments
+neighbors_turnout <- social %>%
+  filter(messages == "Neighbors") %>%
+  pull(primary2006)
+
+civic_turnout <- social %>%
+  filter(messages == "Civic Duty") %>%
+  pull(primary2006)
+
+# Compare them
+t.test(x = neighbors_turnout, y = civic_turnout)
+```
+
+Look at that! The "Neighbors" treatment had about 37.8% turnout compared to 31.5% for "Civic Duty". The p-value is again essentially zero, so this difference is highly significant. Social pressure works!
+
+## What's Actually Happening Under the Hood?
+
+Let's peek behind the curtain and calculate the test statistic manually (now assuming a shared variance across groups). This will help you understand what R is actually doing:
+```{r}
+# Get summary statistics for each group
+results <- social %>%
+  group_by(messages2) %>%
+  summarise(
+    mean = mean(primary2006),
+    sd = sd(primary2006),
+    n = n()
+  )
+
+# Take a look
+results
+```
+
+Now let's do the calculation ourselves:
+```{r}
+# Extract the values we need
+mean_treatment <- results$mean[results$messages2 == "Treatment"]
+mean_control <- results$mean[results$messages2 == "Control"]
+sd_treatment <- results$sd[results$messages2 == "Treatment"]
+sd_control <- results$sd[results$messages2 == "Control"]
+n_treatment <- results$n[results$messages2 == "Treatment"]
+n_control <- results$n[results$messages2 == "Control"]
+
+# The difference in means
+diff_means <- mean_treatment - mean_control
+cat("Difference in means:", diff_means, "\n")
+
+# The standard error (using the large sample formula)
+se <- sqrt(sd_treatment^2/n_treatment + sd_control^2/n_control)
+cat("Standard error:", se, "\n")
+
+# The test statistic
+t_stat <- diff_means / se
+cat("Test statistic:", t_stat, "\n")
+
+# The p-value (using normal approximation since we have huge samples)
+p_value <- 2 * pnorm(abs(t_stat), lower.tail = FALSE)
+cat("P-value:", p_value, "\n")
+```
+
+Look at that—we got essentially the same answer as `t.test()`! The tiny differences are just due to R using a slightly more sophisticated method for calculating degrees of freedom.
+
+## Review Questions
+
+### Conceptual Questions
+
+1. **When would you use a two-sample t-test instead of a one-sample t-test?** Give me a specific example from political science research where you'd need to compare two groups.
+
+2. **What is the null hypothesis in a two-sample t-test?** Write it out in both words and mathematical notation. Why do we usually assume the difference is zero?
+
+3. **Why do we use different formulas for small samples (n < 30) versus large samples?** 
+
+4. **If the p-value from a t-test is 0.03 and your significance level is 0.05, what do you conclude?** What if your significance level was 0.01? How would you explain this to someone who's never taken statistics?
+
+### Calculation Practice
+
+5. **By hand calculation**: You're comparing study methods. Group A (flashcards) has n = 40, mean = 85, sd = 8. Group B (re-reading) has n = 35, mean = 81, sd = 10. Calculate the test statistic. Is this a large or small sample case?
+
+6. **Interpreting R output**: Your colleague runs a t-test and gets:
+```
+   t = 3.45, df = 58, p-value = 0.001
+   95% CI: (2.3, 8.7)
+   mean of x: 42.5
+   mean of y: 37.0
+```
+   What's the difference in means? Would you reject the null at α = 0.05? What does that confidence interval actually tell you?
+
+### R Programming Questions
+
+7. **Diving deeper into the GOTV data**: Using the social pressure data, test whether the "Neighbors" treatment had a different effect than the "Hawthorne" treatment. Write the code and tell me what you find.
+```{r}
+# Your code here
+```
+

@@ -1,0 +1,269 @@
+# Data Basics
+
+## Learning Objectives 
+
+1. Learn how to load data into R, inspect data, and save data. 
+3. Learn what observations and variables represent.  
+3. Learn how to add a variable to a datast using R.
+4. Learn the basic structure of vectors, matrices, and data frames. 
+
+   
+## What Is This For?
+
+Many people think that data science is all about computer wizardry, artificial intelligence, and elaborate data architectures. Instead, on a day-to-day basis many of the most important data skills are much more mundane.  We need to find the right data, get it onto our machines, look at it, understand it, and clean it. These data management steps all come *before* any data analysis, and they are essential to the success of any data analysis project. A common adage in the world of data analysis is, "garbage in, garbage out."  This means that no matter how fancy your machine learning, if you are analyzing bad data, your results will still not be worth very much. In this session, we will learn the basics of what data looks like in R. 
+
+
+## Importing Data 
+
+We will work primarily with .csv files in this course. In this session, we will work with an example data set, <code>genderCorona.csv</code>, which I have created for this class (it's real data). You can download the data set from Canvas or [here at Dropbox](https://www.dropbox.com/scl/fi/15pqhb6ydah5pp7f9ma9i/genderCorona.csv?rlkey=b7qiuxduqsqlkh0du275rpven&st=sprmf1xy&dl=0). 
+
+We will cover two ways of getting these data into R, or *importing* them. The first is to download the data to your computer and then to load it into R. The second is to load the data directly into R using the Dropbox link above.  
+
+### Download data and load into R 
+First, download the file `genderCorona.csv` from Canvas or Dropbox and **save it in the folder you created for this class**. 
+
+Now let's make sure R knows to look for the file in your folder for this class. That is, let's make sure that you set the working directory to the correct folder. We can use the <code>getwd</code> to find out R's current working directory.
+
+```{r, eval=F}
+getwd() 
+```
+
+Verify whether this is the correct folder for your setup. The output from this command always tells you what *directory* R is looking in for files. This means, that whenever you tell R to read files it will look for them here (unless you specifically give R a path). Likewise, when you save files this is where they will go.
+
+If your current working directory is not the folder where you save material for this class, you need to change the working directory. To change where R is looking, we will use the <code>setwd</code> command. For example, if you are on a Mac and you created a folder <code>DS4P_2024</code> on your desktop, your working directory might look something like this: 
+
+```{r, eval=FALSE}
+setwd("~/Desktop/DS4P_2024/")
+```
+
+If you are on Windows, your folder location will look slightly differently. For example, if your windows login name is abcd and you saved the folder in your documents folder, you might type something like 
+
+```{r, eval=FALSE}
+setwd("C:/users/abcd/Documents/DS4P_2024/")
+```
+
+You will need to adjust your code accordingly if your folder is somewhere else or if you named your folder something else. Either way, by the end of this week, you **must** have such a folder on your computer and be able to direct R to this folder using the <code>setwd</code> command.
+
+If you still struggle with this step, revisit the material in the readings or on canvas.  If none of that works for you, watch this short tutorial on how to set your working directory using RStudio.
+
+<p><iframe title="YouTube video player" src="https://www.youtube.com/embed/LNw6hzGgyxM" data-external= "1" width="560" height="315" allowfullscreen="allowfullscreen" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe></p>
+
+Once you have set your working directory and downloaded the data `genderCorona.csv`, getting it into R is relatively straightforward. We use the <code>read.csv</code> function. *Remember* that R is based on objects, and that you need to assign stuff to objects. That is also true for data. You can choose the object name yourself, subject to the constraints we encountered last week (you cannot start with a number, for one). In the following, I will simply create an object `genderCorona`, but you should feel free to change the name. 
+
+```{r, eval=F}
+genderCorona <- read.csv("genderCorona.csv")
+```
+
+ASIDE: If you stored your data in a subfolder within your working directory, for example a subfolder "data", you would have to adjust the code accordingly: 
+
+```{r, eval=F}
+genderCorona <- read.csv("data/genderCorona.csv")
+```
+
+You now have your data loaded into R, as an object `genderCorona`. You can verify that this object is, indeed, a data frame! 
+
+
+### Download data directly into R 
+
+A second option to get data into R is to download it directly. This works if you have a link, such as the link to a file saved on Dropbox posted above. I will generally make links to Dropbox files available as part of this class. You can then download the file directly into R. For example, using the link I gave you, you can download the data and assign it to an object `genderCorona` with the following code: 
+
+```{r}
+genderCorona <- read.csv(url("https://www.dropbox.com/scl/fi/uowu2hj9nwmzu6i79cr1s/genderCorona.csv?rlkey=7bhhnt3vxsupfc91zu1n2rr4y&dl=1"))
+```
+
+Note the ending of the link, which is "dl=1". This tells Dropbox to directly download the file. Sometimes, a shared link to a file will have a 0 in the end, which only directs your computer to look at it, not to download it. Replacing the 0 with a 1 will allow R to download it directly. 
+
+
+## Looking at your data
+
+Once we have the data in R, we can look at it as well.  
+
+```{r, eval=T}
+head(genderCorona) ## Showing the first few rows
+tail(genderCorona) ## Showing the last few rows
+```
+
+You can also use the <code>View</code> and <code>fix</code> commands to either see the entire dataset (like a spreadsheet) or even manually edit values.  Try these on your own. 
+
+```{r, eval=F}
+View(genderCorona) ## Opening the data like a spreadsheet
+fix(genderCorona) ## You can edit data directly this way
+```
+
+## Understand the basic data structure
+
+Let's pause for a moment to understand what you are looking at. First we want to know what each row in the data represents. This is what we term the "unit of analysis."  We refer to each row (or unit) as an observaction.
+
+Here, we have a data set of 39 countries. Each country represents one observation. Each country is identified with a string variable `country` and a numeric code `iso3n`. The latter are standardized codes for all countries in the world, similar to two-letter acronyms for U.S. states. 
+
+Next, we have a set of variables: `WomanLeader` tells us whether a country's government is run by a woman; the variables `Death`, `DeathCases`, and `DeathMillion` capture deaths from Covid19, deaths from Covid19 relative to cases of Covid19, and deaths from Covid19 relative to 1 million citizens; `CapacityHigh` captures whether a country performs above-average on a measure of state capacity; `Trust` captures the percent of people who reported in a standardized survey to have high trust in their government; and `TrustHigh` is coded 1 for countries that perform above-average on the `Trust` variable.  
+
+The function <code>summary</code> creates a summary table for all of the variables. 
+
+```{r, eval=T}
+summary(genderCorona)
+```
+
+You can see that we obtain for each variable a few key pieces of information. We will talk more about the items listed here in the next couple of weeks. 
+
+We can also look at just one variable by specifying the name of a variable using the dollar sign, like this:
+
+```{r, eval=T}
+summary(genderCorona$WomanLeader)
+```
+
+RStudio also makes this easy.  In your 'Global Environment' window you will see an object called <code>genderCorona</code>, or whichever name you assigned to this object. If you click on the triangle next to the name it will show you basic information about the data.  If you click on the ![spreadsheet](figures/spreadsheet.jpeg) symbol it will open up the entire spreadsheet for you to look at.
+
+### Variable names
+
+Sometimes all you want to know are the names of the variables in your datset without any information on the data.  To do this you can use the <code>names</code> function.
+
+```{r, eval=T}
+names(genderCorona)
+```
+
+
+
+## Saving data
+
+After we change the data, we may want to save it for later use. Here I am assuming we want to save a *new* file with a *new* file name. You might also want to overwrite the original file, but that makes it very hard to go back if you find a mistake in your code. In general, it is good practice to keep your *input* files separate from your *output* files. That way, you can always re-create what you have done or change any intermediate steps. 
+
+We can actually save the file in lots of different formats.  To save this as a CSV file we can use the function <code>write.csv</code>. In the following, we will change the file name to `genderCorona_output.csv`. 
+
+```{r, eval=T}
+write.csv(genderCorona, file="genderCorona_output.csv")
+```
+
+Note that unless you specify otherwise it will be saved into your working directory. If you want it in a subfolder Data inside your working directory, you need to specify this: 
+
+```{r, eval=F}
+write.csv(genderCorona, file="Data/genderCorona_output.csv")
+```
+
+The <code>write.csv</code> function has other options controlling how the data is saved.  Here is a video introducing some of these options.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/WjpcbmcJjjM" title="YouTube video player" frameborder="0" data-external= "1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+
+### A note on Windows machines and paths
+
+If you use a computer with a Windows operating system you may sometimes have trouble with setting your paths.  R wants you to use the "/" in path names but windows will give you path names with the "\\". You are going to need to replace any "\\" in a path name you get with the "/".  
+
+(The reason is that R is built for Unix machines and Windows runs on DOS. Macs are also based in Unix, which is one of the few valid reasons why data science types sometimes prefer Macs.)
+
+### Adding a variable to your data
+
+The variable `WomanLeader` captures whether a woman is governing a country: it is 1 when a woman is governing the country, and 0 when a man is governing the country. Let's create a new variable, which is 0 when a woman is governing the country, and 1 when a man is governing the country. While we are at it, we will rescale the variable `Trust`, such that it runs from 0 to 1 instead of 0 to 100. 
+
+```{r, eval=T}
+genderCorona$ManLeader <- 1 - genderCorona$WomanLeader  
+genderCorona$Trust <- genderCorona$Trust/100 
+```
+
+We can see the results if we again look at the summary of the data or at the spreadsheet using the <code>View</code> function. We will return to this next week, but you might already recognize one important point: We have not actually changed the *information* in our data set, in that these two new variables tell us nothing about the world that we did not know already from the existing variables. We just rescaled the existing information. It's a bit like measuring temperature in Fahrenheit or in Celsius. Converting the measure from one to the other doesn't actually change the information we have, just how we express it. 
+
+
+
+
+## Vectors, Matrices, and Data Frames
+
+So far, we've been working with data that's already organized in a nice, tidy format - the <code>genderCorona</code> data frame. But to truly understand how R handles data, we need to understand the building blocks that make up these data structures.
+Think of it this way: if data frames are like completed buildings, then vectors and matrices are like the bricks and beams that hold everything together. Understanding these fundamental structures will help you:
+
+* *Troubleshoot problems* - When R gives you an error message about "incompatible types" or "incorrect dimensions," you'll know what's going wrong
+* *Create your own data* - You won't always import pre-made datasets; sometimes you'll need to build data structures from scratch
+* *Manipulate data more effectively* - Many `R` operations work on vectors, and understanding this will help you transform variables and create new ones
+* *Read and understand R documentation* - Most R functions are described in terms of what types of inputs they accept (vectors, matrices, or data frames)
+
+### Vectors
+
+**Vectors** are the simplest type of data structure in `R`. You can think of a vector as a one-dimensional data structure that contains a collection of things, like a sequence of numbers (1,3,2,54,100) or of string characters ("Tesla", "Honda", "Hyundai"). A vector collects a set of attributes, in a specific order. When creating a vector, you always type `c()` and include the items inside the parentheses, separated by a comma. 
+
+```{r}
+collect1 <- c(1,3,2,54,100) # sequence of numbers
+class(collect1)
+collect2 <- c("Tesla", "Honda", "Hyundai", "Toyota", "Chrysler") # collection of strings
+class(collect2)
+collect3 <- c(NA, "Cars", 2, 5) # mixture of different object types
+class(collect3) # but they are all converted into character
+```
+
+### Matrix
+
+ **Matrices** are two-dimensional data structures that contain the **same** type of data (e.g., all numeric, character, or logical). Matrices are truly amazing things, and you can consider them from many different perspectives. One way to think of a matrix is as a collection of vectors, each vector containing information on a set of attributes. To create a new matrix, use the function `matrix()` as shown below. Because all elements inside the matrix must be of the same data type, all elements will be converted to character when you try to combine different object types inside a matrix. You can also use the `dim()` function to examine the *dimensions* of the matrix, which are the number of rows and columns in the matrix.
+
+```{r, error = TRUE}
+matrix1 <- matrix(1:12, nrow = 4, ncol = 3) # matrix of numbers
+matrix1
+matrix2 <- matrix(c("Apple", "Dell", "HP", "Samsung"), nrow = 2, ncol = 2) # matrix of characters
+matrix2
+matrix3 <- matrix(c(NA, 3, 4, "Nice"), nrow = 2, ncol = 2) # mixture of different object types
+matrix3 # but they are all converted into character (with parentheses)
+dim(matrix1) # first number is the number of rows, second number is number of columns
+```
+
+### Data frames
+
+**Data frames** are like matrices, in that they are also two-dimensional data structures. But a key distinction between the two is that data frames can accommodate different data types. Using the `data.frame()` function, we've created a fictitious data frame called `exam_scores` below. Note that `exam_scores` has two character variables called `name` and `school`, and three numeric variables called `scoreMidterm`, `scoreFinal`, and `gender`.
+
+```{r}
+exam_scores <- data.frame(name = c("Jerry", "Jason", "Ambrose", 
+                                  "Anna", "Sarah", "Jennifer"),
+                         scoreMidterm = c(70, 80, 64, 75, 56, 93),
+                         scoreFinal = c(64, 83, 62, 78, 52, 88),
+                         gender = c(0,0,0,1,1,1),
+                         school = c("B", "A", "A", NA, NA, "B"))
+class(exam_scores)
+str(exam_scores) # note that the four variables have different data types
+head(exam_scores) # view first six rows of the data frame
+```
+
+We will commonly refer to one column in a data frame as a **variable**. A variable captures information on one characteristic for multiple individuals or entities (you might note the similarity to a vector above). For example, in the data frame `exam_scores` you just created, the variable `scoreMidterm` captures the information on midterm exam scores for individual students. Each row in this data frame represents an **observation**. Each variable, in turn, then contains information for that variable for each individual observation. For example, in the data frame `exam_scores`, each row captures information for one student, named in the variable `name`. For each student, we have information for the variables `scoreMidterm`, `scoreFinal`, `gender`, and `school`. We will generally indicate a generic observation with the letter $i$. The **number of observations** is often described by $N$. In total, the data frame above contains information on $N = 6$ observations. 
+  
+Note an important concept in a data frame: Because each row belongs to one observation, we can't just change the order of the values in one arbitrary variable and keep the others fixed. If you were to change the order in one of the variables, but not *all* others, you'd mix up the exam scores, or the gender, or the school of the students. 
+ 
+We will learn below how to manipulate data frames, including how to create new variables. In the data frame `exam_scores`, for example, you might want to create a new variable that represents the average of the midterm and the final exam scores. Before we do this, however, we will get a real data set into R. It is generally not feasible or practical to enter a data set by hand, as we did above for `exam_scores`. It is also error-prone. Instead, we **load** or **import** data sets into R.
+
+## Study Questions for Data Basics 1
+
+### Importing Data
+
+1. What are the two methods for importing data into R that are covered in this reading?
+
+2. What does the `getwd()` function do, and why is it important to know your working directory?
+
+3. How do you change your working directory using R? Why might Windows users need to be careful about path formatting?
+
+### Inspecting and Understanding Data
+
+4. What functions can you use to view the first and last few rows of a dataset?
+
+5. What is the "unit of analysis" in a dataset? What is the unit of analysis in the `genderCorona` dataset?
+
+6. What is the difference between an **observation** and a **variable** in a data frame?
+
+7. How do you access a specific variable in a data frame using R syntax?
+
+8. What information does the `summary()` function provide about your data?
+
+### Saving and Modifying Data
+
+9. Why is it good practice to save modified data with a new filename rather than overwriting the original file?
+
+10. How do you create a new variable in an existing data frame?
+
+### Data Structures in R
+
+11. What are the three main data structures discussed in this reading, and how do they differ in dimensions?
+
+12. What is a **vector** in R? How do you create one?
+
+13. What happens when you try to combine different data types (numeric, character, NA) in a single vector?
+
+14. How are **matrices** different from **vectors**? What restriction do matrices have that data frames do not?
+
+15. Why are **data frames** particularly useful for data analysis compared to matrices?
+
+16. In the `exam_scores` data frame example, how many observations (N) are there? How many variables?
+
+17. Why can't you change the order of values in just one variable of a data frame without affecting the others?

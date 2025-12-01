@@ -1,0 +1,287 @@
+# Hypothesis Testing in R: Are Americans Worried About AI Taking Their Jobs?
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary
+
+In this module, you'll learn how to conduct hypothesis tests in R using real data from the 2024 General Social Survey about AI job concerns. We'll work through the complete five-step hypothesis testing framework, starting with simple approaches using the normal distribution, then refining our analysis with the t-distribution. By the end, you'll be able to:
+
+- Set up null and alternative hypotheses  
+- Calculate test statistics and p-values manually
+- Use R's built-in functions for efficiency
+- Interpret statistical results in meaningful policy contexts
+
+Most importantly, you'll see that hypothesis testing isn't just abstract math—it's a tool for answering real questions that matter for society.
+
+## Introduction: The AI Revolution and Job Anxiety
+
+It's 2025, and AI is everywhere. ChatGPT writes essays, DALL-E creates art, and self-driving cars are becoming reality. Your parents ask if they should worry about their jobs. Politicians debate whether we need Universal Basic Income. Tech leaders alternately promise utopia and warn of disaster.
+
+But what do ordinary Americans actually think? Are people worried about AI taking their jobs, or is this just media hype?
+
+The 2024 General Social Survey—one of the most important social science datasets in America—asked respondents: **"How worried are you that AI will take over many jobs done by humans?"**
+
+Today, we'll use hypothesis testing to determine whether Americans are significantly worried about AI job displacement. This isn't just an academic exercise—the answer has real implications for policy debates about worker retraining, tech regulation, and the social safety net.
+
+## Loading and Understanding the Data
+
+Let's start by loading the GSS data and exploring what we're working with:
+
+```{r}
+# Load necessary packages
+library(haven)  # For reading Stata files
+library(dplyr)  # For data manipulation
+library(ggplot2)  # For visualization
+
+# Load the GSS 2024 data
+# Note: In your assignment, adjust the file path as needed
+data <- read_dta("GSS2024.dta")
+
+# Look at the structure of our variable of interest
+table(data$aiworry)
+```
+
+Notice something important: We have a lot of missing values! Only about 1,536 of 3,309 respondents answered this question. This is common in the GSS—they use a "split ballot" design where different subsets get different questions to keep the survey manageable.
+
+Let's look at the scale:
+
+- 1 = Very Worried
+- 2 = Somewhat Worried  
+- 3 = Neither Worried nor Unworried
+- 4 = Not Very Worried
+- 5 = Not At All Worried
+
+**Critical insight**: Lower numbers mean MORE worried! 
+
+## Data Cleaning: Real Data is Messy
+
+Before we can test anything, we need to clean our data. This is where most real data analysis happens—not in fancy models, but in careful data preparation:
+
+```{r clean-data}
+# Remove NAs and invalid response codes
+gss_clean <- data %>%
+  filter(!is.na(aiworry) & aiworry %in% c(1, 2, 3, 4, 5))
+
+# Check our cleaned data
+n <- nrow(gss_clean)
+print(paste("Sample size after cleaning:", n))
+
+# Calculate summary statistics
+summary(gss_clean$aiworry)
+```
+
+```{r visualize-distribution}
+# Visualize the distribution
+ggplot(gss_clean, aes(x = factor(aiworry))) +
+  geom_bar(fill = "steelblue") +
+  scale_x_discrete(labels = c("1\nVery\nWorried", "2\nSomewhat\nWorried", 
+                              "3\nNeutral", "4\nNot Very\nWorried", 
+                              "5\nNot At All\nWorried")) +
+  labs(title = "Distribution of AI Job Worry Among Americans",
+       subtitle = "GSS 2024 (n = 1,536)",
+       x = "Level of Worry", 
+       y = "Number of Respondents") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 10))
+```
+
+Look at that distribution! More people fall on the "worried" side (1-2) than the "not worried" side (4-5). But is this pattern statistically significant, or could it be due to random sampling variation?
+
+## The Five Steps of Hypothesis Testing
+
+Now we'll apply the five-step framework you learned in the previous module to test whether Americans are significantly worried about AI.
+
+### Step 1: Check Assumptions
+
+Before running any test, we verify our assumptions:
+
+1. This is a random sample, so we have systematic randomness where each data can be considered somewhat an indpendent draw from a commmon population.  (In more advanced classes, we would discuss the use of "survey weights", which are used to correct for imballance in the demographic coverage of the poll.  But let's keep things simple for today.)
+
+2. We n > 1,000, which meanse the CLT theorem applies.  
+
+With n = 1,536, we can confidently use the Central Limit Theorem. The sampling distribution of our sample mean will be approximately normal, even though the underlying data is discrete (1-5 scale).
+
+### Step 2: State the Hypotheses
+
+We need to translate our research question into mathematical hypotheses. Remember, 3 is the neutral point on our scale.
+
+**Null Hypothesis (H₀)**: μ ≥ 3  
+*Americans are neutral or unconcerned about AI taking jobs*
+
+**Alternative Hypothesis (Hₐ)**: μ < 3  
+*Americans ARE worried about AI taking jobs*
+
+This is a **one-sided test** because we have a specific direction in mind—we're testing whether people are MORE worried than neutral, not just different from neutral.
+
+### Step 3: Calculate the Test Statistic
+
+The test statistic measures how many standard errors our sample mean is from the hypothesized value:
+
+```{r calculate-test-stat}
+# Calculate sample statistics
+x_bar <- mean(gss_clean$aiworry)
+s <- sd(gss_clean$aiworry)
+n <- nrow(gss_clean)
+
+print(paste("Sample mean:", round(x_bar, 3)))
+print(paste("Sample standard deviation:", round(s, 3)))
+print(paste("Sample size:", n))
+
+# Calculate standard error
+se <- s / sqrt(n)
+print(paste("Standard error:", round(se, 3)))
+
+# Calculate test statistic (using z for now with large sample)
+mu_0 <- 3  # Our null hypothesis value (neutral)
+z_stat <- (x_bar - mu_0) / se
+print(paste("Test statistic (z):", round(z_stat, 3)))
+```
+
+Our test statistic is `r round(z_stat, 3)`. This means our sample mean is about `r abs(round(z_stat, 1))` standard errors BELOW the neutral point of 3. That's quite far!
+
+### Step 4: Calculate the P-Value
+
+The p-value tells us: "If Americans were truly neutral about AI (H₀ true), what's the probability of getting a sample mean this low or lower?"
+
+```{r calculate-pvalue-normal}
+# Calculate p-value using normal distribution
+p_value_normal <- pnorm(z_stat)
+print(paste("P-value (using normal):", round(p_value_normal, 6)))
+```
+
+The p-value is essentially 0! This means if Americans were truly neutral about AI, there's almost no chance we'd randomly sample 1,536 people and find them this worried.
+
+### Step 5: Draw Conclusions
+
+**Statistical Conclusion**: We reject the null hypothesis (p < 0.001). There is overwhelming statistical evidence that Americans are worried about AI job displacement.
+
+**Practical Interpretation**: The average American rates their worry at 2.24 on our 5-point scale, significantly below the neutral point of 3. This falls between "Very Worried" (1) and "Somewhat Worried" (2), suggesting substantial concern about AI's impact on employment.
+
+## Refining Our Analysis: The t-Distribution
+
+So far, we've used the normal distribution, which is fine for large samples. But technically, we should use the t-distribution because we don't know the true population standard deviation—we estimated it from our sample.  We often don't worry about this because the t-distribution and the standard normal distribution are very similar with large samples. 
+
+### When and Why to Use t
+
+The t-distribution accounts for the extra uncertainty that comes from estimating the population standard deviation. It has "fatter tails" than the normal distribution, making it slightly harder to reject the null hypothesis.
+
+```{r t-distribution}
+# Recalculate using t-distribution
+t_stat <- (x_bar - mu_0) / se  # Same calculation as z_stat
+df <- n - 1  # Degrees of freedom
+
+# P-value using t-distribution
+p_value_t <- pt(t_stat, df = df)
+
+# Compare the two approaches
+comparison <- data.frame(
+  Method = c("Normal (z)", "t-distribution"),
+  Test_Statistic = c(z_stat, t_stat),
+  P_Value = c(p_value_normal, p_value_t),
+  Difference = c(0, p_value_t - p_value_normal)
+)
+
+print(comparison)
+```
+
+With n = 1,536, the normal and t distributions give virtually identical results. The difference in p-values is negligible. But it can show up with smaller samples. If you want to be careful, you can just default to using the t-distribution.  
+
+## Using R's Built-in Function
+
+Now that we understand what's happening under the hood, let's use R's convenient `t.test()` function:
+
+```{r t-test-function}
+# One-sample t-test
+result <- t.test(gss_clean$aiworry, 
+                 mu = 3,                  # Testing against neutral
+                 alternative = "less")    # We hypothesize mean < 3
+
+# Display results
+print(result)
+```
+
+Let's extract the key components:
+
+1. Here's the test statistic
+
+```{r }
+result$statistic
+```
+
+2. Here's the degrees of freedom
+
+```{r }
+result$parameter
+```
+
+
+3. Here's the p-value
+
+```{r }
+result$p.value
+```
+
+4. Here's the sample mean
+
+```{r }
+result$estimate
+```
+
+Notice the confidence interval is entirely below 3, which aligns with our rejection of $H_0$.  Note that the lower end of the confidence interval is not defined because we are doing a one sided test.
+
+## One-Sided vs Two-Sided Tests
+
+We used a one-sided test because we specifically hypothesized that Americans would be worried (mean < 3). But what if we just wanted to test whether opinions differ from neutral in either direction?
+
+```{r two-sided-test}
+# Two-sided test
+result_two <- t.test(gss_clean$aiworry, 
+                     mu = 3, 
+                     alternative = "two.sided")
+
+print(result_two)
+```
+
+In this case, the two-sided p-value is twice the one-sided p-value (when the result is in the predicted direction). Both lead to the same conclusion here because the evidence is so strong.
+
+**When to use each:**
+
+- **One-sided**: You have a specific directional hypothesis based on theory
+- **Two-sided**: You're exploring whether there's any difference
+- **Default**: When in doubt, use two-sided (more conservative)
+
+## Review Questions
+
+### Conceptual Understanding
+
+1. **Why did we test against 3 rather than another value like 2 or 4?**
+   *Hint: Think about what 3 represents on our scale*
+
+2. **What would change if we used a two-sided test instead of one-sided?**
+   *Consider both the p-value and the interpretation*
+
+3. **Why do `pnorm()` and `pt()` give nearly identical p-values with our sample?**
+   *Think about sample size and distribution properties*
+
+4. **If only 20 people had answered the survey, what would change in our analysis?**
+   *Consider assumptions, distribution choice, and confidence in results*
+
+5. **What does it mean that Americans average 2.24 on this 5-point scale?**
+   *Interpret in plain English for a non-statistician*
+
+### Practical Application
+
+6. **What policy recommendations might follow from our finding?**
+   *Connect statistics to real-world implications*
+
+7. **If we wanted 99% confidence instead of 95%, what would change?**
+   *Think about Type I error, p-values, and conclusions*
+
+### Technical Skills
+
+8. **Write R code to test if the mean worry is significantly different from 2 (very worried).**
+
+9. **If the standard error were 0.5 instead of what we calculated, how would this affect our test?**
+

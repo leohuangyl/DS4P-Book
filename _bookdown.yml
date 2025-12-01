@@ -1,0 +1,30 @@
+book_filename: "Course Content"
+output_dir: "docs/"
+rmd_files:
+  - index.Rmd
+  - 01_Introduction-To-R.Rmd
+  - 02_Lab01_R_Markdown_Basics.Rmd
+  - 03_Data-Basics.Rmd
+  - 04_Subsettilng.Rmd
+  - 05_DataTypes_Measurement.Rmd
+  - 06_Recoding.Rmd
+  - 07_centralTendency.Rmd
+  - 08_Dispersion.Rmd
+  - 09summrise_dplyr.Rmd
+  - 10dataViz_single_var.Rmd
+  - 11dataViz_multipleVars.Rmd
+  - 12SamplingDistributions.Rmd
+  - 13SamplingInR.Rmd
+  - 14Probaility.Rmd
+  - 15Poster.Rmd
+  - 16ConfidenceIntervals.Rmd
+  - 17HypothesisTesting1.Rmd
+  - 18HypothesisTestingR.Rmd
+  - 19DifferenceInMeans.Rmd
+  - 20_Causality.Rmd
+  - 21Correlation_Regression.Rmd
+  - 22_InferenceInRegression.Rmd
+  - 23MultiVariateRegression.Rmd
+  - 24_AssessingModelFit.Rmd
+  - 25_RegressionDiagnostics-v2.Rmd
+  - 26_FE_and_Interactions.Rmd

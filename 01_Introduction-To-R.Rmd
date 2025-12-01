@@ -1,0 +1,231 @@
+# Introduction to R
+
+## Learning Objectives 
+
+1. Learn how to do simple arithmetic in R.
+2. Learn how to assign a value to an object in R.
+3. What is the global environment?
+4. Help files
+5. Installing packages
+
+
+## Preliminary Notes 
+This document is an "R Markdown" document, turned into a pdf file. R Markdown combines text and R code in a single file. We will cover R Markdown in lab sessions this week, and you will use these kind of files for both in-class and homework assignments. You will also be able to create, edit, and annotate these files yourself. Please type the code included in this file yourself into R Studio, rather than copy-paste it, to improve your learning experience.  
+
+
+## R as a calculator
+
+The simplest way to use R is to do very basic calculations.  R knows how to handle all of the basic math operations.  
+
+(Side note: to comment a single line of code in R, which means to add notes that are not themselves part of the code, use the hashtag or pound sign at the beginning of the line. You can also add it after your code in the same line to comment out notes after a portion of code. If you're working in an R script, everything after the # will not be read by R.)
+
+```{r}
+5+4 # Addition
+6-3 # Subtraction
+34 / 6 # Division
+5 * 3 # Multiplication
+5^4 # Exponents
+625^(1/4) # More exponents
+```
+
+R comes with a number of constants pre-stored that you can use
+
+```{r, eval=FALSE}
+6.25 # numbers
+pi # And a few other specialty items
+NA # Missing value
+NULL # Nothing.
+0/0 # NaN means "Not a number"
+1/0 # Inf means infinity
+```
+
+
+R follows the order of operations (Please Excuse My Dear Aunt Sally).
+
+```{r}
+2*(3-4)+2
+2*(3-4)+2*(4 + 3)^(1/3)
+```
+
+Side note - if you have multiple exponentiation, they execute right to left.
+
+
+
+## Assigning values to objects
+R is a programming language that is based on *objects*. Pretty much everything can be saved as an object, and you can refer to objects to re-use this saved information. 
+
+You can assign values to objects in two ways, as shown below. The assignment arrow is functionally equivalent to the equal sign. When assigning values to objects, R will always take the value on the right side of the assignment operator (<- or =) and store it in the object on the left side of the assignment operator. This means that the two lines of commented code in the following snippet do different things. One assigns the value 4 to an object called x, one assigns the value 6 to an object called y. If you type the name of the object, R will return the information saved in that object. 
+
+```{r}
+x <- 4
+x
+
+y = 6
+y
+```
+
+It is best practice when coding to avoid "magic numbers" - i.e. all numbers should be stored in named variables so that if we want to change the value, we only have to do so once. This also removes any ambiguity for someone else reading your code who might wonder what the number represents. 
+
+So imagine that we know 238,307 voted in Alaska out of 496,387 people old enough to vote (the voting age population).  We could calculate that directly, but it can make your code brittle.  That is, if later on you find out that  238,407 voted you would have to replace that everywhere in your script. So instead we can assign these values to a variable name.  We can then use these "objects" in other places in the script.
+
+```{r}
+total.votes.ak <-  238307
+voting.age.population.ak <- 496387
+turnout.ak <-total.votes.ak/voting.age.population.ak
+turnout.ak
+```
+
+Students new to R have a hard time understanding the importance of "assignment."  Roughly speaking, if you have R do something and don't use an assignment operator (<- or =), all you have done is print out the results. You haven't actually *done* anything.
+
+For example, let's say we want to change `voting.age.population.ak` to be 496388.  A beginner's mistake might be to use the code: 
+
+```{r}
+voting.age.population.ak+1
+```
+
+This looks like the right number, but because there was no assignment, the change wasn't saved. If we go back and look at the value again,
+
+```{r}
+print(voting.age.population.ak)
+```
+
+we have the wrong number again. The right way to do this is to "overwrite" the original object this way:
+
+
+```{r}
+voting.age.population.ak <- voting.age.population.ak+1
+```
+
+Now this change has been saved, because the object itself has been replaced. This example also illustrates why you might want to use <- for assignments, rather than =, even though they are functionally equivalent in R. We are not writing mathematical equations. The above would be a problematic equation, but it is perfectly fine as an assignment.
+
+```{r}
+print(voting.age.population.ak)
+```
+
+**As a general rule of thumb: if you did not assign, you did not save.**
+
+We can also assign an ordered list of items to an object, using the concatenate function `c()`. As an example, 
+
+```{r}
+exam.scores <- c(58, 62, 43, 50)
+```
+
+assigns a list with three numbers to the object `exam.scores`. Let's say you wanted to scale these exam scores to be out of a total of 100. You could now write 
+
+```{r}
+exam.scores <- exam.scores/100 
+exam.scores 
+```
+
+It is incredibly easy to overwrite objects, which can be both useful and frustrating. Let's say you made a mistake in the above code snippet and instead wrote 
+
+```{r}
+exam.scores <- exam.scores[100] 
+```
+
+As you can verify for yourself, the content of your object `exam.scores` now looks very different, and you can't retrieve the prior information from the object. 
+
+You can also combine objects into new objects. This is useful if you want to append one list to another, for example. Let's say you have two more exam scores. You can then piece them together like this: 
+
+```{r}
+exam.scores <- c(58, 62, 43, 50)
+exam.scores.add <- c(59, 72)
+exam.scores <- c(exam.scores, exam.scores.add)
+exam.scores 
+```
+
+In case you have not noticed this already: You just input data into R! The objects above contain values, which are information, which are data. Whether that information is useful is perhaps a different question altogether. For now, the important point is that we now have data in R that we can use. Of course, inputting data like this is neither practical nor robust (it's very easy to make typos). Just imagine you'd have to input data for infant mortality rates for [168 countries, over a 30 year period](https://onlinelibrary.wiley.com/doi/full/10.1111/j.1540-5907.2006.00220.x), using this approach. In the future, we will therefore learn how to load, or import, data sets into R. 
+
+
+
+## The global environment and how to clean it
+
+Named objects are stored in the "global environment", which means that they can be accessed at any time by any function you might run. The commands `ls()` and `rm()` are used to show or remove variables from the global environment respectively.
+
+```{r}
+a <- 1 # Make an object 'a'
+b <- 2 # Make an object 'b'
+ls() # Let's print out all the objects in our global environment.
+```
+
+Sometimes you might want to remove a specific object.  For this you can use the `rm` function.
+
+```{r}
+rm(a) # this removes a from the global environment
+rm(B) # ha - R is case sensitive, and "b" is different from "B" 
+ls() # check that a is gone, b is still there
+```
+
+You can combine these two to clean out the global environment for a fresh start.
+
+```{r}
+rm(list = ls()) #this removes all global variables
+```
+
+
+## Getting help
+
+Learning about functions and how to specify them correctly is half the battle.  If you know the name of the function you want, you can access the help files in two ways (try running these yourself)
+
+```{r, eval=F}
+help(sqrt) # help w/ functions
+?sqrt # same thing
+```
+
+If you can't quite remember the name of the function, you can try searching for it.
+```{r, eval=F}
+help.search("sqrt") # what am I looking for? Fuzzy matching
+```
+
+Many, but not all, functions also have examples showing you how to use them correctly.
+```{r}
+example(sqrt)
+```
+
+Remember that these help menus are usually written by the same people who wrote the functions you are using. It turns out that being good at making software does not mean you are good at *documenting* software.  Help files are almost uniformly **not** helpful unless you already know a good bit about computer programming and (in some cases) a lot about the function itself.  The same thing goes for examples.  The code above for the `sqrt` function probably means nothing to you.  
+
+So, first, if the help files confuse you that's OK.  They confuse most of us. Later in the class we will try to explain how they are structured, but for the most part you can follow (and modify) the examples we give you.  
+
+Second, don't rely on the help files alone. There are TONS of resources online helping students understand the basic functions we use in the course that are much more helpful than standard 'help' files.
+
+
+## Installing packages
+
+The beauty of R is that there are **packages**. Packages, in turn, contain **functions**, and functions take **arguments**. 
+
+The first time you use a package you are going to have to install it from the comprehensive R archiving network (CRAN).  
+```{r, eval=FALSE}
+install.packages("dplyr") # This will prompt a user interface to choose the "mirror" or repository
+```
+
+For the most part, you only need to run this command once. Once you have a package installed, it is on your computer, similar to any other piece of software (like R Studio). But when you want to use a function from the package you are going to have to do one of two things. First you can use the `library` function at the top of your script to load the package. This, again, is similar to any other piece of software, in that you are effectively starting the software and making it available. 
+
+```{r, eval=FALSE}
+library("dplyr") # This will prompt a user interface to choose the repository
+```
+
+The first time you install a package, R will ask you to specify from where it should download the data. Simply choose one of the options, such as the server located in St. Louis, the content is the same for all of them. 
+
+Your second option is to specify the package for a function using the `::` operator.  For instance, I could use the `mutate` function from `dplyr` like this.
+
+```{r, eval=FALSE}
+dplyr::mutate() # Don't run this line, it won't work because we have no data yet.
+```
+
+Lastly, packages come with example data sets built in that you can access using the `data` command.
+```{r, eval=FALSE}
+data(rock) # load the dataset on rocks from the MASS package
+?rock # there are help files for these
+ls() # there's rock -- in the global environment
+data(road, package="MASS") # you can load these data sets without loading the package
+```
+
+A useful package for learning R is `swirl`. It contains short exercises for learning R. To get started, type: 
+
+```{r, eval=FALSE}
+install.packages(swirl)
+library("swirl")
+swirl()
+```
+
+Again, the first line, to install the package, only needs to be run once. The second line, loading the package, needs to be done every time you restart R. Note that some packages will require you to install additional packages; in that case, R will prompt you and ask for your permission. Whenever you have a few minutes, you can pick up some R skills with swirl. 

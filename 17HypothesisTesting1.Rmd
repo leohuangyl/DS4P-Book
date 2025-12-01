@@ -1,0 +1,275 @@
+# Understanding Hypothesis Testing
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Learning Objectives
+
+1. Understand why we use hypothesis tests in research
+2. Grasp the logic behind hypothesis testing
+3. Learn the five essential components of any hypothesis test
+4. Distinguish between null and alternative hypotheses
+5. Understand p-values and statistical significance
+
+## Why Hypothesis Testing Matters
+
+Imagine you're having dinner with friends, and someone claims that WashU students are more conservative than the national average. Everyone you know seems to be a Biden voter, so you're skeptical. How would you settle this argument?
+
+You could:
+
+- Argue really loudly (whoever is most obnoxious wins)
+- Tell stories about your liberal classmates (anecdotal evidence)
+- Actually collect and analyze data (the scientific approach!)
+
+This is what hypothesis testing is all about: **using data to test competing claims in a systematic, rigorous way**. It's how we move from opinion and anecdote to evidence-based conclusions.
+
+## The Basic Logic of Hypothesis Testing
+
+Hypothesis testing might seem complex at first, but the underlying logic is straightforward. Here's the basic idea:
+
+1. **Start as a skeptic.** We begin by assuming the claim we're testing is false. This assumption is called the **null hypothesis**.
+
+2. **Collect evidence.** We gather data through random sampling to see what's actually happening.
+
+3. **Ask a key question.** If the skeptic's position were correct, how likely would we be to see data like ours (or even more extreme)?
+
+4. **Draw a conclusion.** If our data would be very unlikely under the null hypothesis, we have good reason to reject it. If not, we can't rule it out.
+
+This approach protects us from jumping to conclusions. We only reject the skeptic's position when we have strong evidence against it.
+
+## The Research Context
+
+Let's make this concrete. According to a 2019 national survey, 17.8% of college freshmen identified as conservative. Now suppose you take a random sample of 200 WashU freshmen, and 39 of them (19.5%) identify as conservative.
+
+Your friend claims WashU students are **more** conservative than average. You're skeptical. Can this difference (19.5% vs 17.8%) be explained by random chance, or does it suggest something real?
+
+This is exactly the kind of question hypothesis testing helps us answer.
+
+## The Five Parts of a Hypothesis Test
+
+Every hypothesis test has the same five components. Let's walk through each one.
+
+### 1. Assumptions
+
+Before we can perform a hypothesis test, we need to verify certain conditions:
+
+- **Randomness:** The data must come from a random sample or have randomess from some other source that is like a random sample. This ensures our sample is representative of the population.
+
+- **Normal sampling distribution:** With a large sample, we can assume the sampling distribution of the sample mean is approximately normal. This is thanks to the Central Limit Theorem, which gives us the mathematical leverage we need.
+
+- **Smaller sample sizes:** With smaller sample sizes, we may need to make additional assumptions like the normality of the populiation.
+
+These assumptions aren't just technical details—they're the foundation that makes our statistical conclusions valid.
+
+### 2. State the Hypotheses
+
+In any hypothesis test, we have two competing hypotheses:
+
+**The Null Hypothesis ($H_0$):** This represents the skeptic's position—the claim we're trying to disprove. In our example, the null hypothesis is that WashU students are no more conservative than the national average. Mathematically: $H_0: \mu \le 0.178$
+
+**The Alternative Hypothesis ($H_a$):** This is the research claim we're testing—the theory that motivated our study. In our example: WashU students **are** more conservative than average. Mathematically: $H_a: \mu > 0.178$
+
+Notice something important: we're testing whether we can reject the null hypothesis. We never "prove" the alternative hypothesis. We can only show that the data are inconsistent with the null hypothesis.
+
+In research papers, you'll rarely see the null hypothesis spelled out explicitly. Instead, researchers state their hypothesis (e.g., "democracies are less likely to go to war than autocracies"), and the null hypothesis is implied (democracies are not less war-prone than autocracies).
+
+### 3. Calculate the Test Statistic
+
+The test statistic measures how far our sample result falls from what the null hypothesis predicts, relative to the expected variability.
+
+For our example:
+
+- Sample proportion: $\hat{\mu} = \bar{x} = \frac{39}{200} = 0.195$
+- Null hypothesis value: $\mu_0 = 0.178$
+- Standard error: $se_{\bar{x}} = \frac{s}{\sqrt{n}} \approx 0.028$
+
+The test statistic is:
+
+$$TS = \frac{\hat{\mu} - \mu_0}{se_{\hat{\mu}}} = \frac{0.195 - 0.178}{0.028} = 0.607$$
+
+**What does this mean?** Our observed proportion is 0.607 standard errors above what the null hypothesis predicts. The test statistic tells us how extreme our result is in standardized units.
+
+Think of it this way: if the null hypothesis is true, how surprising is our result? The test statistic quantifies that surprise.
+
+### 4. Calculate the P-Value
+
+> **P-value:** The probability of observing a sample statistic as extreme as ours (or more extreme), assuming the null hypothesis is true.
+
+This is the heart of hypothesis testing. The p-value tells us: "If the skeptic is right, and the true proportion really is 17.8% or less, what's the probability we'd randomly sample a result as extreme as 19.5% or more?"
+
+In our example, the p-value is approximately 0.272. This means there's a 27.2% chance of getting a sample like ours (or more extreme) if the null hypothesis is true.
+
+**Important distinction:** We're not just asking about the probability of getting exactly 19.5%. We're asking about the probability of getting 19.5% **or anything even more extreme** (like 20%, 25%, etc.).
+
+**One-sided vs. Two-sided Tests:**
+
+- Our example uses a **one-sided test** because we only care if WashU students are MORE conservative (not less conservative).
+- If we cared about differences in either direction, we'd use a **two-sided test** and multiply our p-value by 2.
+
+### 5. Draw a Conclusion
+
+Now we interpret the p-value using a decision rule called the **significance level** (denoted $\alpha$, usually set at 0.05).
+
+**The decision rule:**
+
+- If p-value ≤ 0.05: Reject the null hypothesis
+- If p-value > 0.05: Fail to reject the null hypothesis
+
+In our example, p ≈ 0.272, which is much larger than 0.05. Therefore:
+
+1. We made a research hypothesis (WashU students are more conservative than average)
+2. We set out the skeptic's position (they're not more conservative)
+3. The evidence did not refute the skeptic
+4. **Conclusion:** The test is inconclusive. We cannot reject the null hypothesis.
+
+**What does "fail to reject" mean?** It means we don't have sufficient evidence to disprove the skeptic. It does **not** mean the skeptic is definitely right—just that our data don't contradict their position strongly enough.
+
+## A Second Example: Stronger Evidence
+
+Let's imagine our sample was different. Suppose 55 out of 200 students identified as conservative (27.5% instead of 19.5%).
+
+Now:
+
+- Sample proportion: $\bar{x} = 0.275$
+- Standard error: $se \approx 0.0317$
+- Test statistic: $TS = \frac{0.275 - 0.178}{0.0317} = 3.06$
+- P-value: ≈ 0.001
+
+With p ≈ 0.001, we would reject the null hypothesis. Our conclusion changes:
+
+1. We made a research hypothesis (WashU students are more conservative than average)
+2. We set out the skeptic's position
+3. The evidence would be highly unlikely (only 0.1% chance) if the skeptic were right
+4. **Conclusion:** We reject the null hypothesis in favor of the research hypothesis
+
+This smaller p-value tells us that if the true proportion were really 17.8% or less, it would be extremely unlikely (only about 1 in 1,000 chance) to randomly sample 55 conservatives out of 200 students.
+
+## Understanding What P-Values Really Mean
+
+The p-value is probably the most misunderstood concept in statistics. Let's be clear about what it does and doesn't tell us:
+
+**What a p-value IS:**
+
+- The probability of seeing data as extreme as ours (or more extreme) IF the null hypothesis is true
+- A measure of how surprising our data would be under the null hypothesis
+- A tool for decision-making about statistical hypotheses
+
+**What a p-value is NOT:**
+
+- The probability that the null hypothesis is true
+- The probability that our result happened by chance
+- A measure of the size or importance of an effect
+
+Think of the p-value as answering this question: "If the skeptic is right, how weird is my data?" A small p-value means your data would be very weird under the null hypothesis, suggesting the null hypothesis is probably wrong.
+
+## The Logic of Statistical Significance
+
+Why do we use 0.05 as our cutoff? This threshold ($\alpha$ = 0.05) is a convention, not a law of nature. It means we're willing to reject the null hypothesis when there's only a 5% chance (or less) of seeing data this extreme if the null is true.
+
+Different fields sometimes use different thresholds:
+
+- Medical research often uses $\alpha$ = 0.01 (more stringent)
+- Some social sciences use $\alpha$ = 0.10 (less stringent)
+- The key is to decide on α **before** looking at your data
+
+**Type I and Type II Errors:**
+
+Hypothesis testing involves uncertainty, so mistakes are possible:
+
+- **Type I Error:** Rejecting the null hypothesis when it's actually true (false positive). The significance level α is the probability of making this error.
+- **Type II Error:** Failing to reject the null hypothesis when it's actually false (false negative).
+
+We can't eliminate both types of errors—reducing one typically increases the other. The significance level represents our tolerance for Type I errors.
+
+## Why This Matters for Research
+
+Hypothesis testing provides a systematic framework for:
+
+1. **Testing theories:** Does democracy reduce war? Do income levels affect voting behavior? Hypothesis testing helps us evaluate these claims with data.
+
+2. **Avoiding confirmation bias:** By starting from a skeptical position (the null hypothesis), we force ourselves to find strong evidence before accepting $\alpha$ claim.
+
+3. **Communicating uncertainty:** P-values and significance levels make explicit how confident we are in our conclusions.
+
+4. **Replicability:** Other researchers can replicate our tests and verify our conclusions because hypothesis testing follows a standardized procedure.
+
+## Common Pitfalls and How to Avoid Them
+
+**Pitfall 1: Confusing "fail to reject" with "accept"**
+
+- Wrong: "We accept the null hypothesis"
+- Right: "We fail to reject the null hypothesis" or "The test was inconclusive"
+
+Failing to find evidence against the null is not the same as proving it's true.
+
+**Pitfall 2: P-hacking**
+
+Testing multiple hypotheses and only reporting significant results is unethical and leads to false discoveries. 
+
+**Pitfall 3: Ignoring practical significance**
+
+A statistically significant result might not be practically important. With huge samples, tiny differences can be statistically significant but substantively meaningless.
+
+**Pitfall 4: Misinterpreting the p-value**
+
+Remember: the p-value is NOT the probability that the null hypothesis is true.
+
+## The Bigger Picture
+
+We commonly have two tasks in data analysis:
+
+1. **Understanding a complex world:** What patterns exist in our data?
+2. **Understanding a probabilistic world:** Are these patterns systematic or just random noise?
+
+Hypothesis testing addresses the second question. When we find a pattern in data, hypothesis testing helps us determine whether that pattern is likely to reflect something real (systematic) or just sampling variability (random).
+
+This is why hypothesis testing is fundamental to science. It provides a principled way to distinguish signal from noise, helping us build reliable knowledge about the world.
+
+## Study Questions
+
+### Understanding the Concepts
+
+1. What is a p-value? Explain what it means in plain English, without using technical jargon.
+
+2. What does it mean to "reject the null hypothesis"? What does it mean to "fail to reject the null hypothesis"? Why don't we say "accept the null hypothesis"?
+
+3. What is a significance level ($\alpha$)? Why is $\alpha$ = 0.05 commonly used as the threshold for statistical significance?
+
+4. Explain the difference between a one-sided hypothesis test and a two-sided hypothesis test. When would you use each type?
+
+### Interpreting Results
+
+5. A researcher tests whether WashU students study more hours per week than the national average of 15 hours. She finds p = 0.03. Using $\alpha$ = 0.05, what should she conclude? What does this p-value mean?
+
+6. Another researcher tests whether campaign ads affect voter turnout and finds p = 0.18. Using $\alpha$ = 0.05, what should he conclude? Does this prove that campaign ads have no effect? Explain.
+
+### Setting Up Hypothesis Tests
+
+7. A researcher believes that students who attend office hours get higher grades than those who don't. 
+   - What is the null hypothesis?
+   - What is the alternative hypothesis?
+   - Should this be a one-sided or two-sided test? Why?
+
+8. You want to test whether Democratic and Republican voters differ in their support for climate policy (not specifying which direction).
+    - State the null hypothesis
+    - State the alternative hypothesis
+    - Should this be a one-sided or two-sided test? Why?
+
+### Understanding Errors
+
+9. What is a Type I error? What is the probability of making a Type I error if we use $\alpha$ = 0.05?
+
+10. What is a Type II error? Which is worse: Type I or Type II error? Does it depend on the situation?
+
+### Critical Thinking
+
+11. A friend tells you: "I found p = 0.02, which means there's only a 2% chance the null hypothesis is true!" What's wrong with this interpretation? What does p = 0.02 actually mean?
+
+### Application Questions
+
+12. You're studying whether voter turnout is higher in competitive districts. Design a hypothesis test:
+    - What would you measure?
+    - What is your null hypothesis?
+    - What is your alternative hypothesis?
+    - What evidence would convince you to reject the null hypothesis?

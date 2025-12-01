@@ -1,0 +1,319 @@
+# Using summarise() and group_by() for Descriptive Statistics
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Learning Objectives
+
+1. Learn how to use `summarise()` to calculate descriptive statistics
+2. Master calculating means, medians, standard deviations, and variances
+3. Learn how to calculate multiple statistics at once
+4. Understand how to use `group_by()` to calculate statistics by groups
+5. Practice combining `group_by()` and `summarise()` for comparative analysis
+
+## Getting Started with the Data
+
+Today we'll work with the `Anscombe` dataset, which provides information about education expenditure for each US state in 1970. It contains four variables:
+
+- `education`: per capita education expenditure (in dollars)
+- `income`: per capita income (in dollars)
+- `young`: proportion under 18 years old (per 1000 residents)
+- `urban`: proportion living in urban areas (per 1000 residents)
+
+```{r message=FALSE}
+library(tidyverse)
+library(car) # for the Anscombe dataset
+
+school_spend <- Anscombe
+```
+
+## Basic Statistics with summarise()
+
+The `summarise()` function (also spelled `summarize()`) is a powerful tool for calculating statistics. It creates a new data frame containing the summary statistics you request.
+
+### Calculating a Single Statistic
+
+Let's start by calculating the mean income across all states:
+
+```{r}
+school_spend %>% 
+  summarise(mean_income = mean(income))
+```
+
+Notice that:
+
+- We use the pipe operator `%>%` to pass the data to `summarise()`
+- Inside `summarise()`, we create a new variable name (`mean_income`)
+- We specify what to calculate using `mean(income)`
+
+### Multiple Statistics for One Variable
+
+We can calculate several statistics for the same variable:
+
+```{r}
+school_spend %>% 
+  summarise(
+    mean_education = mean(education),
+    median_education = median(education),
+    sd_education = sd(education),
+    var_education = var(education)
+  )
+```
+
+### Multiple Variables, Multiple Statistics
+
+We can also calculate statistics for different variables in one command:
+
+```{r}
+school_spend %>% 
+  summarise(
+    mean_income = mean(income),
+    mean_education = mean(education),
+    median_urban = median(urban),
+    sd_young = sd(young)
+  )
+```
+
+## Common Statistical Functions
+
+Here are the most common functions you'll use with `summarise()`:
+
+- `mean()`: average value
+- `median()`: middle value
+- `sd()`: standard deviation
+- `var()`: variance
+- `min()`: minimum value
+- `max()`: maximum value
+- `n()`: count of observations
+
+### Example: Complete Summary
+
+```{r}
+school_spend %>% 
+  summarise(
+    n_states = n(),
+    min_education = min(education),
+    max_education = max(education),
+    mean_education = mean(education),
+    median_education = median(education),
+    sd_education = sd(education)
+  )
+```
+
+## Group-wise Statistics with group_by()
+
+The real power comes when we combine `summarise()` with `group_by()`. This allows us to calculate statistics separately for different groups in our data.
+
+### Creating Groups for Analysis
+
+First, let's create a categorical variable that groups states by their education spending level:
+
+```{r}
+school_spend <- school_spend %>% 
+  mutate(
+    education_level = case_when(
+      education < 150 ~ "Low",
+      education >= 150 & education < 200 ~ "Medium",
+      education >= 200 ~ "High"
+    )
+  )
+```
+
+### Calculating Statistics by Group
+
+Now we can calculate statistics for each spending level:
+
+```{r}
+school_spend %>% 
+  group_by(education_level) %>% # This is where we specify the group -- note the %>% 
+  summarise(
+    n_states = n(),
+    mean_income = mean(income),
+    median_income = median(income)
+  )
+```
+
+Notice how:
+
+- `group_by()` comes before `summarise()`
+- The output has one row for each group
+- `n()` tells us how many states are in each group
+
+### Multiple Grouping Variables
+
+We can also create groups based on multiple variables. Let's categorize states by both education spending and urbanization:
+
+```{r}
+school_spend <- school_spend %>% 
+  mutate(
+    urban_level = case_when(
+      urban < 500 ~ "Rural",
+      urban >= 500 & urban < 700 ~ "Mixed",
+      urban >= 700 ~ "Urban"
+    )
+  )
+
+school_spend %>% 
+  group_by(education_level, urban_level) %>% 
+  summarise(
+    n_states = n(),
+    mean_income = mean(income),
+    sd_income = sd(income)
+  )
+```
+
+## Practical Examples
+
+### Example 1: Comparing Young Population by Education Spending
+
+Do states that spend more on education have different age demographics?
+
+```{r}
+school_spend %>% 
+  group_by(education_level) %>% 
+  summarise(
+    n_states = n(),
+    mean_young = mean(young),
+    sd_young = sd(young)
+  )
+```
+
+### Example 2: Income Statistics by Urbanization
+
+How does income vary with urbanization level?
+
+```{r}
+school_spend %>% 
+  group_by(urban_level) %>% 
+  summarise(
+    n_states = n(),
+    mean_income = mean(income),
+    median_income = median(income),
+    sd_income = sd(income)
+  )
+```
+
+Look at the output?   Do high spending states or low spending states have more young people?
+
+### Example 3: Complete Summary Table
+
+Let's create a comprehensive summary combining multiple groupings:
+
+```{r}
+school_spend %>% 
+  group_by(education_level, urban_level) %>% 
+  summarise(
+    n = n(),
+    avg_income = mean(income),
+    avg_urban = mean(urban),
+    avg_young = mean(young),
+    income_variation = sd(income)
+  ) %>% 
+  arrange(desc(avg_income))
+```
+
+Look at the output?   urban or rural areas have higher incomes?
+
+
+## Important Notes
+
+### Saving Your Results
+
+Remember that `summarise()` creates a new data frame. If you want to use these results later, you need to save them:
+
+```{r}
+income_by_education <- school_spend %>% 
+  group_by(education_level) %>% 
+  summarise(
+    mean_income = mean(income),
+    sd_income = sd(income)
+  )
+
+# Now we can use income_by_education later
+print(income_by_education)
+```
+
+### Handling Missing Values
+
+If your data has missing values (NA), you'll need to add `na.rm = TRUE` to your statistical functions:
+
+```{r}
+# Example with simulated missing data
+school_spend_with_na <- school_spend
+school_spend_with_na$income[5] <- NA
+
+school_spend_with_na %>% 
+  summarise(
+    mean_income_wrong = mean(income),  # This returns NA
+    mean_income_correct = mean(income, na.rm = TRUE)  # This calculates correctly
+  )
+```
+
+## Study Questions for Using summarise() and group_by()
+
+### Understanding summarise()
+
+1. What does the `summarise()` function do to a data frame? Specifically, how does it transform your data from many rows to fewer rows?
+
+2. If you have a data frame with 51 rows (one for each state) and you use `summarise()` without `group_by()`, how many rows will the output have? Why?
+
+3. Inside `summarise()`, you write something like `mean_income = mean(income)`. What does the part before the `=` do? What does the part after the `=` do?
+
+4. What will happen if you run this code: `school_spend %>% summarise(mean(income))`? How could you modify it to give the output a meaningful column name?
+
+### Statistical Functions in summarise()
+
+5. List at least 5 statistical functions you can use inside `summarise()` and what each calculates.
+
+6. What does the `n()` function do inside `summarise()`? Why is it useful?
+
+7. Write a single `summarise()` statement that calculates: (a) the minimum education spending, (b) the maximum education spending, and (c) the difference between max and min (the range).
+
+### Multiple Statistics and Variables
+
+8. Can you calculate statistics for multiple variables in one `summarise()` call? Give an example.
+
+9. Can you calculate multiple statistics for the same variable in one `summarise()` call? Give an example.
+
+### Understanding group_by()
+
+10. When you use `group_by()` before `summarise()`, what does it tell R to do? Does it change the original data or just change how `summarise()` behaves?
+
+11. In the pipeline `data %>% group_by(variable) %>% summarise(...)`, which function comes first and why does the order matter?
+
+12. You have 51 states in your data. If you use `group_by(education_level)` where education_level has categories "Low" (15 states), "Medium" (25 states), and "High" (11 states), then use `summarise()`, how many rows will your final output have?
+
+### Practical Applications
+
+15. What's wrong with this code and how would you fix it?
+    ```
+    school_spend %>% 
+      summarise(mean_income = mean(income)) %>%
+      group_by(education_level)
+    ```
+
+### Multiple Grouping Variables
+
+16. Can you use more than one variable in `group_by()`? What happens to your output when you do?
+
+17. If you group by `education_level` (3 categories) and `urban_level` (3 categories), what's the maximum number of rows your summary could have? Will it always have that many?
+
+### Saving and Using Results
+
+22. What type of object does `summarise()` return - a vector, a data frame, or something else?
+
+### Conceptual Understanding
+
+23. Explain in your own words what this code does:
+    ```{R run=FALSE}
+    school_spend %>%
+      group_by(urban_level) %>%
+      summarise(
+        states = n(),
+        avg_education = mean(education),
+        education_spread = sd(education)
+      )
+    ```
+
+25. What's the difference between using `summary(school_spend$income)` and using `school_spend %>% summarise(mean_income = mean(income))`? When would you use each?

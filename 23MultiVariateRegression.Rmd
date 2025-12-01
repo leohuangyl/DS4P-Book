@@ -1,0 +1,369 @@
+# Multiple Regression and Controlling for Confounders
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. Understand the concept of confounding and why we need to control for other variables
+2. Interpret coefficients in multiple regression models where we include control variables
+3. Read and interpret standard regression output from R, focusing on coefficients, standard errors, t-statistics, and p-values
+4. Explain how adding control variables can change our conclusions about relationships
+
+## What Is This For?
+
+In our previous modules on correlation and regression, we learned how to measure and describe relationships between two variables. We discovered, for example, that economic growth predicts incumbent vote share in presidential elections. But finding a relationship between two variables raises an important question we have not yet fully addressed: is this relationship causal, or could it be explained by other factors?
+
+Consider a concrete example. Suppose we find that older Americans express warmer feelings toward Donald Trump on feeling thermometer scales. Does age directly cause these warmer feelings? Or could this relationship be explained by something else? Perhaps older Americans are more likely to identify as Republicans, and it is really party identification driving feelings toward Trump, not age itself.
+
+This is the problem of confounding. A confounder is a variable that influences both our predictor and our outcome, creating the appearance of a relationship that might not reflect a direct causal connection. If we want to understand whether age truly predicts Trump evaluations, we need to account for party identification. In statistical language, we need to "control for" party ID.
+
+Multiple regression gives us a tool to address confounding by including additional variables in our model. Instead of just regressing Trump thermometer scores on age, we can regress Trump scores on age while simultaneously accounting for party identification. This allows us to better estimate the relationship between age and Trump evaluations among people with the same party identification, effectively removing the confounding influence of partisanship. There may may still be *other* confounders, but at least we hav partially addressed the confounder of partisanship.
+
+This module introduces multiple regression as a method for controlling confounders. We will learn how to include multiple predictors in a regression model, how to interpret the resulting coefficients, and how to read the standard regression output that R provides. These skills are essential for conducting credible empirical research in political science, where confounding is ubiquitous and careful analysis requires accounting for alternative explanations.
+
+## The Problem of Confounding
+
+Before we dive into the statistics, let us build intuition about confounding using a simple example that has nothing to do with politics.
+
+### An Intuitive Example: Cars, Weight, and Fuel Efficiency
+
+Consider the relationship between a car's weight and its fuel efficiency (miles per gallon). Heavier cars tend to get worse gas mileage. We can see this relationship using the classic mtcars dataset, which contains data on 32 different car models from the 1970s:
+
+```{r}
+# Load the mtcars data (built into R)
+data(mtcars)
+
+# Look at the first few rows
+head(mtcars)
+
+# Simple regression: mpg predicted by weight
+model_simple <- lm(mpg ~ wt, data = mtcars)
+summary(model_simple)
+```
+
+The coefficient on weight is about -5.3, meaning that for each additional 1,000 pounds of weight, fuel efficiency decreases by about 5.3 miles per gallon. This seems straightforward: heavier cars use more fuel.
+
+But wait. What makes cars heavier? Often, it is a more powerful engine. Cars with bigger engines weigh more AND consume more fuel because the engine itself burns more gasoline. This means engine size could be a confounder. Let us visualize this:
+
+```{r}
+# Visualize the relationship, coloring by horsepower
+ggplot(mtcars, aes(x = wt, y = mpg, color = hp)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  scale_color_gradient(low = "blue", high = "orange") +
+  labs(x = "Weight (1000 lbs)",
+       y = "Miles Per Gallon",
+       color = "Horsepower",
+       title = "Weight, Engine Power, and Fuel Efficiency",
+       subtitle = "Heavier cars tend to have more powerful engines (orange)") +
+  theme_minimal()
+```
+
+Notice how the orange points (high horsepower) cluster in the bottom right. Heavy cars tend to have powerful engines, and both weight and horsepower reduce fuel efficiency. This is confounding in action.
+
+When we ignore horsepower and just look at the weight-MPG relationship, we are mixing together two effects: the direct effect of weight on fuel consumption, and the indirect effect that heavier cars have bigger engines. If we want to isolate the direct effect of weight, we need to control for horsepower.
+
+### What Does "Controlling For" Mean?
+
+When we say we are controlling for a variable, we mean we are trying to compare observations that are similar on that variable. In our car example, controlling for horsepower means we are comparing cars with similar engine power to see how weight affects fuel efficiency among that group.
+
+Think of it this way. If we compare a lightweight car with a small engine to a heavy car with a large engine, we cannot tell whether the difference in fuel efficiency is due to weight, engine size, or both. But if we compare two cars with the same horsepower where one weighs more, then we are isolating the effect of weight.
+
+Multiple regression accomplishes this by simultaneously estimating the relationship between fuel efficiency and weight while accounting for differences in horsepower. It effectively asks: "Among cars with the same horsepower, how does weight relate to fuel efficiency?"
+
+There are several ways to describe what controlling for a variable does. All of these phrases mean essentially the same thing:
+
+- We are holding the control variable constant
+- We are removing the influence of the control variable
+- We are making observations comparable on the control variable
+- We are adjusting for the control variable
+- We are partialling out the effect of the control variable
+- We are blocking alternative explanations through the control variable
+
+These are all different ways of expressing the same core idea: we are trying to isolate the relationship between our predictor of interest and the outcome by accounting for other variables that might create spurious associations.
+
+## Multiple Regression: The Model
+
+Multiple regression extends simple bivariate regression by including additional predictor variables. The mathematical model looks like this:
+
+$$Y_i = \alpha + \beta_1 X_{1i} + \beta_2 X_{2i} + \epsilon_i$$
+
+Let us break down what this notation means:
+
+- $Y_i$ is the outcome for observation $i$ (fuel efficiency for car $i$)
+- $X_{1i}$ is the first predictor for observation $i$ (weight of car $i$)
+- $X_{2i}$ is the second predictor for observation $i$ (horsepower of car $i$)
+- $\alpha$ is the intercept (expected fuel efficiency when both weight and horsepower equal zero)
+- $\beta_1$ is the coefficient on the first predictor (effect of weight, holding horsepower constant)
+- $\beta_2$ is the coefficient on the second predictor (effect of horsepower, holding weight constant)
+- $\epsilon_i$ is the error term (all other factors affecting fuel efficiency)
+
+The key insight is in how we interpret the coefficients. In bivariate regression, $\beta$ told us how much $Y$ changes for a one-unit increase in $X$. In multiple regression, $\beta_1$ tells us how much $Y$ changes for a one-unit increase in $X_1$ while holding $X_2$ constant. This "holding constant" phrase is crucial. It means we are comparing observations with the same value of $X_2$.
+
+Just like in simple regression, we estimate these coefficients using ordinary least squares. The computer finds the values of $\alpha$, $\beta_1$, and $\beta_2$ that minimize the sum of squared residuals. The only difference is that now we are fitting a plane through a three-dimensional space rather than a line through a two-dimensional space. But the underlying principle is the same: find the model that makes the smallest prediction errors.
+
+## Multiple Regression in R: The mtcars Example
+
+Let us fit a multiple regression model to our car data, including both weight and horsepower as predictors:
+
+```{r}
+# Multiple regression: mpg predicted by weight AND horsepower
+model_multiple <- lm(mpg ~ wt + hp, data = mtcars)
+summary(model_multiple)
+```
+
+This output contains a wealth of information. Let us focus on the most important parts for now: the coefficients table.
+
+### Reading the Coefficients Table
+
+The coefficients table shows four key pieces of information for each variable:
+
+1. **Estimate**: This is the coefficient itself, the $\beta$ values from our equation
+2. **Std. Error**: This measures the uncertainty in our estimate
+3. **t value**: This is the test statistic for whether the coefficient differs from zero
+4. **Pr(>|t|)**: This is the p-value for the hypothesis test
+
+Let us interpret each row:
+
+**The intercept** (37.23): This tells us that a car with zero weight and zero horsepower would have a predicted fuel efficiency of 37.23 mpg. This is not particularly meaningful in practice because no car has zero weight or horsepower. The intercept is often not the focus of our interpretation.
+
+**The weight coefficient** (-3.88): This is the key finding we care about. It tells us that for each additional 1,000 pounds of weight, fuel efficiency decreases by 3.88 miles per gallon, holding horsepower constant. Notice that this coefficient is less negative than the -5.3 we found in the bivariate model. Why? Because part of the weight effect in the simple model was actually due to heavier cars having more powerful engines. When we control for horsepower, the weight effect is smaller.
+
+**The horsepower coefficient** (-0.032): This tells us that for each additional unit of horsepower, fuel efficiency decreases by 0.032 miles per gallon, holding weight constant. Put differently, a car with 100 more horsepower gets about 3.2 fewer miles per gallon, comparing cars of the same weight.
+
+Both coefficients have very small p-values (look at the Pr(>|t|) column), indicating strong evidence that these relationships are not due to random chance. 
+
+Note that there is one p-value for each coefficient.  We are probably not interested in all of them, and in this case we really are only interested in the one in the `wt` column. This one is very small ($1.12 \times 10^{-6} = \frac{1.12}{1,000,000}$).  
+
+### Comparing the Models
+
+Let us compare the coefficient on weight across our two models:
+
+```{r}
+# Simple model coefficient on weight
+coef(model_simple)["wt"]
+
+# Multiple model coefficient on weight
+coef(model_multiple)["wt"]
+```
+
+The weight coefficient changed from -5.34 in the simple model to -3.88 in the multiple model. This change happened because we controlled for horsepower. In the simple model, the weight coefficient was capturing both the direct effect of weight AND the indirect effect that heavier cars have bigger engines. In the multiple model, we have separated these effects.
+
+This demonstrates a crucial point: the relationship we observe between two variables can change when we account for confounders. Sometimes controlling for confounders makes relationships weaker, sometimes stronger, and sometimes relationships disappear entirely. This is why multiple regression is so important for understanding relationships in observational data.
+
+## Application to Political Science: Trump Thermometer Scores
+
+Now let us apply these concepts to a real political science question. We will use data from the 2020 American National Election Study to investigate how age relates to feelings toward Donald Trump.
+
+One argument is that age will have a strong relationship, since older voters were so much more supportive of President Trump relative to young voters. But just like in our cars example above, there is the chance of confounding. Older voters are also more likely to be Republican.  Could it be that the relationship between age and Trump support is simiply a result of party affiliation?  Maybe age actually has no direct relationship at all!
+
+To test this, we will need run a regression where we "control" for partisanship.
+
+### Loading and Preparing the Data
+
+To get started, we need to get our data ready.
+
+```{r}
+# Load the ANES 2020 data
+anes <- read.csv("anes2020.csv")
+
+# Examine the structure
+glimpse(anes)
+```
+
+Our key variables are:
+
+- `trump.th`: Feeling thermometer for Donald Trump (0-100 scale, where 0 is very cold/negative and 100 is very warm/positive)
+- `age`: Age of respondent in years
+- `partyid`: Party identification (1=Democrat, 2=Republican, 3=Independent, 5=Other party)
+
+We need to prepare our data by creating dummy variables for party identification. A dummy variable takes the value 1 if a condition is true and 0 otherwise. We will create two dummy variables:
+
+```{r}
+# Create party ID dummy variables
+anes <- anes %>%
+  mutate(
+    Democrat = ifelse(partyid == 1, 1, 0),
+    Republican = ifelse(partyid == 2, 1, 0)
+  )
+
+# Check our new variables
+table(anes$Democrat)
+table(anes$Republican)
+```
+
+Why do we create two dummy variables when there are more than two party categories? *We need to leave one category out as a reference group*. In this case, we are leaving out Independents and other party identifiers. The coefficients on our dummy variables will tell us how Democrats and Republicans differ from this reference group.  (We will talk about this more in a future class.)
+
+### The Bivariate Relationship: Age and Trump Evaluations
+
+Let us start by examining the simple relationship between age and Trump thermometer scores:
+
+```{r}
+# Simple regression: Trump thermometer predicted by age
+model_age <- lm(trump.th ~ age, data = anes)
+summary(model_age)
+```
+
+The coefficient on Age is positive and statistically significant (the p-value is very small). Specifically, each additional year of age is associated with about 0.24 points higher on the Trump thermometer scale. Over a 40-year age difference (say, comparing a 30-year-old to a 70-year-old), this amounts to about 9.6 points on the thermometer.
+
+Let us visualize this relationship:
+
+```{r}
+ggplot(anes, aes(x = age, y = trump.th)) +
+  geom_jitter(alpha = 0.08, width = 0.5, height = 5) +
+  geom_smooth(method = "lm", color = "red", se = TRUE) +
+  labs(x = "Age (years)",
+       y = "Trump Feeling Thermometer (0-100)",
+       title = "Older Americans Express Warmer Feelings Toward Trump",
+       subtitle = "Each additional year of age predicts 0.24 points higher on thermometer") +
+  theme_minimal()
+```
+
+The positive relationship is hard to see visually given how many points there are, but notice the relative empty quadrant in the upper left (young voters with favorable feelings towards Trump).  the red line recovers the overall linear relationship.
+
+But is this a direct effect of age on Trump evaluations? Or could it be that older Americans are more likely to be Republicans, and Republicans obviously rate Trump much more warmly? This is where controlling for party identification becomes essential.
+
+### Adding the Control: Party Identification
+
+Now we will add party identification to our model to see whether the age relationship persists when we compare people of the same party:
+
+```{r}
+# Multiple regression: Trump thermometer predicted by age AND party
+model_age_party <- lm(trump.th ~ age + Democrat + Republican, data = anes)
+summary(model_age_party)
+```
+
+Let us carefully interpret each coefficient in this model:
+
+**The intercept** (30.55): This is the expected Trump thermometer score for a person with age zero who is neither a Democrat nor a Republican (i.e., an Independent or other party identifier). The age zero part is nonsensical, but the party interpretation is meaningful. It tells us that Independents and others give Trump an average score around 30 (actually at age zero, but we will see how age modifies this).
+
+**The Age coefficient** (0.11): This is the change in Trump thermometer score for each additional year of age, holding party identification constant. Notice that this coefficient is much smaller than the 0.24 we found in the bivariate model. When we control for party, the age effect is reduced. This tells us that part of the age relationship we observed earlier was due to older people being more likely to be Republicans. However, the coefficient is still positive and statistically significant, meaning there is still an age effect even within party groups.
+
+**The Democrat coefficient** (-27.56): This tells us how much Democrats differ from the reference group (Independents and others) in their Trump evaluations, holding age constant. Democrats rate Trump about 27.5 points lower than Independents of the same age. This is a massive difference and is highly statistically significant (p-value near zero). This makes sense given partisan polarization.
+
+**The Republican coefficient** (43.68): This tells us that Republicans rate Trump about 43.6 points higher than Independents of the same age. Combined with the intercept, this means older Republicans give Trump very high thermometer scores (approaching the maximum of 100), while younger Republicans give somewhat lower scores.
+
+All three predictors are statistically significant, indicated by the very small p-values and the *** symbols.  Their standard errors, t-statistics, and p-values are shown in the same rows as the coefficients.  
+
+### What Did Controlling for Party Accomplish?
+
+By including party identification in our model, we learned something important: the age-Trump relationship is partially, but not entirely, explained by partisanship. Let us think about what this means:
+
+The bivariate model found that each year of age increases Trump thermometer scores by 0.24 points. This mixes together two things: (1) older people tend to be more Republican, and Republicans love Trump, and (2) within each party, older people rate Trump somewhat more warmly.
+
+The multiple regression model separates these effects. The reduced coefficient on Age (0.11 instead of 0.24) tells us the effect of age within party categories. The large coefficients on the party dummies tell us how much party identification matters.
+
+If we had found that the Age coefficient dropped to near zero or became statistically insignificant after controlling for party, we would conclude that the age relationship was spurious, driven entirely by the partisan composition of age groups. But we did not find that. Even after controlling for party, age still predicts Trump evaluations. This suggests there is something about age itself (perhaps generational experiences, life circumstances, or values that shift with age) that influences Trump evaluations beyond just party identification.
+
+This is the power of multiple regression: it allows us to disentangle relationships and test whether observed associations persist after accounting for potential confounders.
+
+## A Step-by-Step Guide to Interpreting Regression Coefficients
+
+When you encounter regression output, follow these steps to interpret the coefficients:
+
+**Step 1: Identify the coefficient of interest.** Look at the row for the predictor variable you care about. In our Trump example, if we care about age, we look at the Age row.
+
+**Step 2: Read the estimate.** The number in the Estimate column is the coefficient. This tells you the change in the outcome for a one-unit increase in the predictor.
+
+**Step 3: Add the "holding other variables constant" phrase.** In multiple regression, every coefficient represents the relationship between that predictor and the outcome among observations with the same values of the control variables.
+
+**Step 4: State the direction and magnitude.** Say whether the relationship is positive or negative, and give the specific magnitude. For Age in our multiple model: "Each additional year of age is associated with a 0.11 point increase in Trump thermometer scores, holding party identification constant."
+
+**Step 5: Assess statistical significance.** Look at the p-value (Pr(>|t|) column). If it is below 0.05, we typically conclude there is strong evidence the relationship is not zero. Look for the asterisks as a quick visual cue.
+
+**Step 6: Consider substantive significance.** Even if a relationship is statistically significant, ask whether it is large enough to matter in practice. A 0.11 point difference per year of age is statistically significant but fairly small substantively compared to the 48-point difference between Democrats and Independents.
+
+### Understanding Standard Errors and t-statistics
+
+The standard error (Std. Error column) measures the uncertainty in our coefficient estimate. Smaller standard errors mean more precise estimates. The t-statistic is calculated by dividing the coefficient by its standard error. Large absolute values of the t-statistic (typically above 2 or below -2) indicate statistical significance. R then converts this t-statistic to a p-value, which tells us the probability we would see a coefficient this large if the true relationship were zero.
+
+You do not need to calculate these by hand, but understanding what they represent helps you read regression output intelligently. When you see a small p-value and asterisks, you know there is strong statistical evidence for a relationship. When you see a large p-value and no asterisks, you know the evidence is weak.
+
+## Visualizing Multiple Regression Results
+
+While we cannot easily plot a three-dimensional regression plane, we can create visualizations that show how the relationship between our main predictor and outcome varies across levels of our control variable. This code is a bit advanced, and I will not ask you to do this on your problem sets or exam.  But I'll show the whole code in case you want to make something like this for your poster project.
+
+```{r}
+# Create predictions for different party groups
+pred_data <- expand.grid(
+  age = seq(18, 80, by = 1),
+  Democrat = c(0, 1),
+  Republican = c(0, 1)
+)
+
+# Remove impossible combinations (can't be both Democrat and Republican)
+pred_data <- pred_data %>%
+  filter(!(Democrat == 1 & Republican == 1))
+
+# Make predictions
+pred_data$predicted_trump <- predict(model_age_party, newdata = pred_data)
+
+# Create party label
+pred_data <- pred_data %>%
+  mutate(Party = case_when(
+    Democrat == 1 ~ "Democrat",
+    Republican == 1 ~ "Republican",
+    TRUE ~ "Independent/Other"
+  ))
+
+# Plot
+ggplot(pred_data, aes(x = age, y = predicted_trump, color = Party)) +
+  geom_line(size = 1.2) +
+  labs(x = "Age (years)",
+       y = "Predicted Trump Thermometer Score",
+       title = "Age and Trump Evaluations Across Party Groups",
+       subtitle = "Controlling for party reveals age effects within partisan groups",
+       color = "Party ID") +
+  scale_color_manual(values = c("Democrat" = "blue", 
+                                 "Republican" = "red",
+                                 "Independent/Other" = "gray50")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+This visualization shows three parallel lines, one for each party group. The fact that the lines are parallel (they have the same slope) reflects that the Age coefficient is the same for all groups in our model. The vertical distance between the lines shows the effect of party identification. And the slope of each line shows the effect of age *within* that party group.
+
+## Review Questions
+
+### Conceptual Understanding
+
+1. What is a confounding variable? Why do we need to control for confounders when estimating relationships in observational data?
+
+2. In your own words, explain what it means to say we are "holding a variable constant" or "controlling for" a variable in multiple regression.
+
+3. True or False: If we control for a confounder and the coefficient on our main predictor does not change, this means the confounder was not actually confounding the relationship. Explain your answer.
+
+### Interpretation Practice
+
+4. Suppose we regress vote choice (0 = voted for Democrat, 1 = voted for Republican) on income (in thousands of dollars) and education (in years). We get the following results:
+
+```
+              Estimate  Std. Error  t value  Pr(>|t|)
+(Intercept)    0.15        0.12      1.25     0.211
+Income         0.008       0.002     4.00     0.000
+Education      0.025       0.013     1.92     0.006
+```
+
+Interpret the coefficient on Income in a complete sentence, including the "holding constant" phrase.
+
+5. Based on the output in Question 4, which variables have statistically significant relationships with vote choice? How do you know?
+
+6. In the mtcars example, the coefficient on weight changed from -5.34 in the bivariate model to -3.88 in the multiple model that controlled for horsepower. Explain in plain language why this coefficient changed.
+
+### Application to the Trump Example
+
+7. In our Trump thermometer example, the Age coefficient was 0.24 in the bivariate model and 0.11 in the multiple model that controlled for party. What does this tell us about the relationship between age, party identification, and Trump evaluations?
+
+8. The coefficient on the Democrat dummy variable was large and negative. Write out the interpretation of this coefficient in a complete sentence. Make sure to mention what the reference group is and the fact we are controlling for age.
+
+9. Imagine we added a control variable for education to our Trump model. What would it mean if the Age coefficient stayed at 0.11? What would it mean if the Age coefficient dropped to 0.05 and became statistically insignificant?
+
+### Critical Thinking
+
+10. We controlled for party identification in our Trump example. Can you think of other variables that might confound the age-Trump relationship? For each confounder you identify, explain how it might relate to both age and Trump evaluations.
+
+11. Controlling for confounders is essential for causal inference, but it is not sufficient. Even with many controls, why might we still be cautious about making causal claims from observational data?

@@ -1,0 +1,327 @@
+# Causality - Understanding Cause and Effect
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Learning Objectives
+
+1. Understand the fundamental difference between causation and prediction
+2. Master the concept of potential outcomes and counterfactuals
+3. Recognize common confounding relationships and why they matter
+4. Understand the fundamental problem of causal inference
+5. Grasp the concept of average treatment effects (ATE)
+6. Learn why randomization is the gold standard for causal inference
+
+## What Is This For?
+
+Every day, we're bombarded with claims about cause and effect. [Coffee causes cancer](https://www.msn.com/en-in/news/other/top-expert-reveals-the-type-of-coffee-thats-linked-to-cancer/ar-AA1u4XUG?apiversion=v2&noservercache=1&domshim=1&renderwebcomponents=1&wcseo=1&batchservertelemetry=1&noservertelemetry=1). No wait, [coffee prevents cancer](https://www.washingtonpost.com/wellness/2025/01/23/coffee-tea-consumption-cancer-risk/). Social media causes depression. Tax cuts create jobs. Campaign ads change minds. These aren't just academic questions.  Causal claims in empirical science shape personal decisions and public policy worth trillions of dollars.
+
+Unfortunately, many of these claims are wrong, or at least unproven. The problem isn't that the researchers are incompetent (well, usually not). The problem is that figuring out what causes what is incredibly, fundamentally difficult. Today we're going to understand why that is, and what we can do about it.
+
+Let me start with my favorite example of why this matters. Years ago, journalist Thomas Friedman noticed something fascinating: [no two countries that both had McDonald's restaurants had ever gone to war](https://www.nytimes.com/1996/12/08/opinion/foreign-affairs-big-mac-i.html) with each other. This led to what he called the "Golden Arches Theory of Conflict Prevention." The pattern held for years – it was a real, observable correlation.
+
+So should we achieve world peace by opening more McDonald's franchises? Should the UN budget include a line item for Big Macs? Of course not. The presence of McDonald's doesn't cause peace. Instead, countries wealthy and developed enough to have McDonald's also tend to be economically interconnected in ways that make war costly. The McDonald's is just along for the ride.
+
+This distinction between correlation and causation isn't just academic. It's the difference between policies that work and policies that waste resources. It's the difference between medical treatments that heal and ones that just happen to be popular among people who were going to get better anyway.
+
+## Part 1: Prediction vs. Causation
+
+Let's get precise about what we mean by prediction versus causation. These are fundamentally different concepts, and confusing them causes endless trouble.
+
+### What is Prediction?
+
+Prediction is actually the simpler concept. We say that variable X predicts variable Y if knowing the value of X helps us make a better guess about the value of Y. That's it. No deep philosophical commitment required.
+
+For example, [your credit score predicts whether you'll file a car insurance claim](https://www.usaa.com/advice/how-does-credit-score-affect-insurance-premiums/?akredirect=true#:~:text=Credit%2Dbased%20insurance%20score,-As%20previously%20stated&text=Lenders%20care%20a%20lot%20about,typically%20results%20in%20lower%20rates). This might seem weird – what does paying your credit card bills on time have to do with your driving? But insurance companies have discovered that people with low credit scores file more claims on average. They don't need to know why this relationship exists. They just need to know that it does exist, reliably enough to set premiums.
+
+Here's what's crucial: prediction requires zero causal interpretation. Ice cream sales predict drowning deaths (both go up in summer). The number of [Nicolas Cage movies in a year used to predict swimming pool drownings](https://www.wnycstudios.org/podcasts/otm/articles/spurious-correlations) (this is real data, and yes, it's as ridiculous as it sounds). Your height predicts your salary. None of these relationships are causal, but they're all real correlations in the data.
+
+### What is Causation?
+
+Causation is much more demanding. We say X causes Y if changing X would lead to a change in Y. Notice that key word: "would." Causation is fundamentally about counterfactuals – things that didn't happen but *could* have.
+
+Let's make this concrete with the 2008 financial crisis. Congress passed a massive stimulus package to create jobs. Did it work? To answer that question causally, we need to know what would have happened if Congress hadn't passed the stimulus. If unemployment would have hit 20% without the stimulus and only reached 10% with it, then the stimulus prevented mass unemployment. If unemployment would have stayed at 5% without the stimulus but jumped to 10% with it, then the stimulus was actively harmful.
+
+See the problem? We can't observe both realities. We got the stimulus, unemployment hit 10%, and we'll never know what the alternative timeline looked like. This is why economists still argue about the stimulus twenty years later.
+
+### Why the Distinction Matters
+
+The distinction between prediction and causation matters because they lead to completely different actions. If you want to predict which students will struggle in your class, you might look at their previous grades, their attendance, maybe even seemingly random things like whether they sit in the front row. All of these predict academic performance.
+
+But if you want to help struggling students improve, you need to know what causes poor performance. Moving a struggling student to the front row probably won't magically improve their grades – sitting in front is more likely a signal of motivation than a cause of success. You need to identify actual causal factors: maybe they need tutoring, maybe they're working too many hours at a job, maybe they have an undiagnosed learning difference.
+
+Insurance companies can use credit scores for prediction because they just want to estimate risk. But a government trying to reduce traffic accidents needs to understand causation. Banning people with bad credit from driving would be both unfair and ineffective. You need to address actual causes like drunk driving, distracted driving, poor road design.
+
+## Part 2: The Fundamental Problem of Causal Inference
+
+Now we're ready to tackle the core challenge that makes causal inference so difficult. It's called the fundamental problem of causal inference, and once you understand it, you'll see why so many causal claims you encounter are probably wrong.
+
+### Potential Outcomes Framework
+
+To think clearly about causation, we need to introduce some notation. Don't worry – the math is simple, but it helps us be precise about concepts that are easy to muddle in plain English.
+
+Let's say we want to know whether a new tutoring program improves test scores. For each student, we'll denote the treatment as T, where T = 1 means the student gets tutoring and T = 0 means they don't. 
+
+Now here's the key insight: each student has two potential outcomes. We'll write these as Y(1) and Y(0). The outcome Y(1) is the test score the student would get if they received tutoring. The outcome Y(0) is the test score that same student would get if they didn't receive tutoring.
+
+For any individual student i, the causal effect of tutoring would be:
+
+$$\text{Individual Causal Effect} = Y_i(1) - Y_i(0)$$
+
+This is just the difference between what happens with treatment and what happens without it. If Sarah would score 85 with tutoring and 75 without it, then the causal effect of tutoring for Sarah is 10 points.
+
+### The Core Problem
+
+Here's where things get frustrating: **we can never observe both Y(1) and Y(0) for the same person**. Sarah either gets tutoring or she doesn't. We see one potential outcome, and the other remains forever counterfactual – something that could have happened but didn't.
+
+This isn't a problem we can solve with better data or fancier statistics. It's baked into the nature of reality. We don't have access to parallel universes where we can run different versions of history and see what happens.
+
+The movie ["It's a Wonderful Life"](https://en.wikipedia.org/wiki/It%27s_a_Wonderful_Life) provides a perfect illustration. George Bailey wishes he'd never been born, and an angel shows him what his town would look like if he'd never existed. He sees his brother dead (because George wasn't there to save him from drowning), his wife unmarried, his town turned into a slum. The difference between the actual world and this counterfactual world represents George Bailey's causal effect on his community.
+
+That's a beautiful story, but we don't have guardian angels to show us counterfactual worlds. When we give a student tutoring, we can't see what their score would have been without it. When Congress passes a stimulus, we can't see what unemployment would have been without it.
+
+### What We Actually Observe
+
+Let me show you what this looks like with some example data. Imagine we have six students, and we're studying the effect of tutoring on test scores:
+
+```{r}
+# Create example data showing potential outcomes
+students <- data.frame(
+  Student = c("Amy", "Bob", "Carlos", "Diana", "Eve", "Frank"),
+  Treated = c(1, 0, 1, 0, 1, 0),
+  Y_1 = c(85, 78, 92, 88, 73, 81),  # Potential outcome with treatment
+  Y_0 = c(75, 72, 80, 85, 65, 79),  # Potential outcome without treatment
+  True_Effect = c(10, 6, 12, 3, 8, 2)
+)
+
+# What we wish we could see
+print("What we wish we could see (both potential outcomes):")
+students
+```
+
+In this magical world where we can see everything, we could calculate that tutoring helps Amy by 10 points, Bob by 6 points, Carlos by 12 points, and so on. But here's what we actually get to see in the real world:
+
+```{r}
+# What we actually observe
+observed <- students[,1:2]
+observed$Observed_Score <- ifelse(students$Treated == 1, 
+                                   students$Y_1, 
+                                   students$Y_0)
+print("What we actually observe:")
+observed
+```
+
+Amy got tutoring and scored 85. Would she have scored 75 without tutoring? We'll never know. Bob didn't get tutoring and scored 72. Would he have scored 78 with tutoring? Again, we'll never know.
+
+This is the fundamental problem of causal inference: causal effects are defined in terms of counterfactuals we can't observe.
+
+## Part 3: Average Treatment Effects
+
+Since we can't measure individual causal effects, we need a different approach. This is where the concept of average treatment effects comes in, and it's how most modern causal inference works.
+
+### From Individual to Average Effects
+
+While we can't calculate the individual causal effect for Amy, we can try to estimate the average causal effect across all students. The Average Treatment Effect (ATE) is defined as:
+
+$$\text{ATE} = \frac{1}{n} \sum_{i=1}^{n} [Y_i(1) - Y_i(0)]$$
+
+In plain English, this is the average of all the individual causal effects. If we could magically observe all potential outcomes, we'd calculate the treatment effect for each person and then take the average.
+
+Of course, we still can't observe all potential outcomes, so we can't calculate this directly. But – and this is the key insight – we can estimate it under certain conditions. Instead of the true ATE, we calculate:
+
+$$\widehat{\text{ATE}} = \frac{1}{n_1} \sum_{\{T_i=1\}} Y_i(1) - \frac{1}{n_0} \sum_{\{T_i=0\}} Y_i(0)$$
+
+This looks more complicated than it is. We're just taking the average outcome for people who got treatment minus the average outcome for people who didn't get treatment. Using our tutoring example:
+
+```{r}
+# Calculate the estimated ATE from observed data
+treated_scores <- observed$Observed_Score[observed$Treated == 1]
+control_scores <- observed$Observed_Score[observed$Treated == 0]
+
+mean_treated <- mean(treated_scores)
+mean_control <- mean(control_scores)
+estimated_ate <- mean_treated - mean_control
+
+cat("Average score with tutoring:", mean_treated, "\n")
+cat("Average score without tutoring:", mean_control, "\n")
+cat("Estimated Average Treatment Effect:", estimated_ate, "\n")
+
+# What's the true ATE with our magical complete data?
+true_ate <- mean(students$True_Effect)
+cat("True ATE (if we could see all potential outcomes):", true_ate, "\n")
+```
+
+If this all looks pretty familliar, that's because it is.  This is just the difference-in-means estimator we have already looked at in this class. To calculate the ATE, we just need to subtract the means for each group.  But this won't work all of the time.  We will need some additional assumptions.
+
+
+### The Key Assumption
+
+Notice that our estimate is pretty close to the truth in this example. But that's only because I generated the data in a special way. In the real world, this estimate is only valid if the treated and control groups are comparable.
+
+What does "comparable" mean? It means there are no systematic differences between the groups beyond the treatment itself that are related to the outcome. In our tutoring example, the estimate would be biased if, say, struggling students were more likely to seek tutoring. Then the tutoring group would have scored lower than the control group even without any tutoring, and we'd underestimate (or even reverse) the true effect.
+
+This is worth stating formally: **the simple difference in means gives us a valid estimate of the causal effect only when assignment to treatment is independent of the potential outcomes**. When this condition fails, we have what's called confounding or selection bias.
+
+## Part 4: Confounding and Causal Relationships
+
+Now we need to talk about the various ways that correlations can exist without causation. Understanding these patterns is crucial for recognizing when a correlation might be causal and when it's definitely not.
+
+### Common Causal Patterns
+
+The simplest case is direct causation, where X actually causes Y. We can represent this with an arrow: X → Y. Campaign donations might cause electoral success. Smoking causes lung cancer. Practice causes improvement. These are genuine causal relationships where changing X would change Y.
+
+But there are several other patterns that create correlations without direct causation. The most important is the spurious relationship, where some third factor Z causes both X and Y. We write this as: Z → X and Z → Y. 
+
+Summer weather causes both ice cream sales and swimming, which causes both ice cream sales and drowning deaths. There's a strong correlation between ice cream sales and drowning, but buying ice cream doesn't make you drown, and drowning doesn't make people buy ice cream. The correlation is real, but it's not causal.
+
+Another pattern is chain relationships, where X causes Z which causes Y. We write this as X → Z → Y. Education might increase income, and income might improve health, creating a correlation between education and health. Education does affect health, but only indirectly through income.
+
+These different patterns matter enormously for policy and intervention. If ice cream caused drowning (direct causation), we should ban ice cream. If summer weather causes both (spurious relationship), banning ice cream would accomplish nothing. If education improves health through income (chain relationship), then education would only help health if it actually increased income – getting a degree without improved earnings wouldn't help.
+
+### Real-World Example: The Google Memo
+
+A few years ago, an engineer at Google [wrote a memo](https://en.wikipedia.org/wiki/Google%27s_Ideological_Echo_Chamber) arguing that women were underrepresented in tech because of biological differences in personality and interests. Women, he argued, were more interested in people than things, preferred work-life balance, and were more neurotic. Since these differences could explain why fewer women worked in tech, he concluded that diversity efforts were misguided.
+
+The memo caused a huge controversy, and Google fired the engineer. Some people were outraged at Google – didn't the engineer cite real psychological research? Wasn't Google punishing him for following the science?
+
+Here's the problem: the engineer had confused correlation for causation in the presence of an obvious confounder. Yes, researchers have found population-level average differences between men and women on various psychological measures. And yes, these differences correlate with representation in tech. But consider this alternative explanation:
+
+Gender norms in our society (let's call this factor Z) might cause both psychological differences (X) and career outcomes (Y). Maybe growing up in a world that tells girls they're not good at math makes them less interested in technical subjects. Maybe seeing few female role models in tech makes women prefer other careers. Maybe workplace cultures that assume long hours are possible because someone else is handling childcare create that "preference" for work-life balance.
+
+To make this absurdly clear, let me propose an equally "scientific" argument: Women have longer hair than men on average. Long hair gets in the way of looking at computer screens. Therefore, women are biologically less suited for programming. This is obviously ridiculous, but it follows the exact same logical structure as the original memo. We have a real correlation (hair length correlates with tech employment), but the causal interpretation is nonsense because we're ignoring the confounding factor of social gender norms.
+
+## Part 5: Establishing Causation
+
+Given all these challenges, how do we ever establish causation? There are three things we need to demonstrate, and the third one is by far the hardest.
+
+### Three Requirements for Causal Claims
+
+First, we need to establish temporal order. For X to cause Y, X must come before Y in time. This might seem obvious, but it's not always clear in observational data. Do democratic countries become wealthy, or do wealthy countries become democratic? Does depression cause social media use, or does social media use cause depression? Without clear temporal ordering, we can't even begin to make causal claims.
+
+Second, we need to show an association. If X causes Y, then X and Y should be correlated in our data. This is what most of statistics is about – detecting patterns and relationships in data. We can calculate correlations, run regressions, perform t-tests. But remember association is an important signal for causation, but it's not sufficient. Correlation does not imply causation, even when the correlation is highly statistically significant.
+
+Third, and most challenging, we need to eliminate alternative explanations. This is where most causal arguments fail. Even if X comes before Y and X correlates with Y, there might be some confounding factor Z that explains the relationship. Maybe people who do X are different from people who don't in some other way that affects Y. Maybe some external factor causes both X and Y. Maybe the relationship runs in the opposite direction.
+
+### The Challenge of Confounders
+
+The burden of proof is on the researcher making the causal claim. You need to convince skeptics that you've thought of all the relevant confounders and dealt with them. This is incredibly difficult because the world is complex and interconnected.
+
+Consider a simple question: does getting a college degree increase earnings? College graduates earn more than non-graduates, so there's definitely an association. College comes before career earnings, so temporal order is established. But what about alternative explanations?
+
+Maybe people who go to college are smarter, and they would have earned more anyway. Maybe they're more motivated. Maybe they come from wealthier families with better connections. Maybe they're healthier, or more confident, or better at standardized tests, or live in areas with better job markets, or any of a thousand other differences that could affect earnings.
+
+This is why the phrase "all else being equal" appears so often in social science. We want to know the effect of college on earnings, all else being equal. But in observational data, all else is never equal.
+
+## Part 6: Two Paths to Causal Inference
+
+Given these challenges, how do we ever make valid causal claims? There are two main approaches, and they both try to make the treatment and control groups comparable in different ways.
+
+### Path 1: Randomization
+
+The gold standard for causal inference is the randomized controlled trial (RCT), also known as an experiment. The beautiful thing about randomization is that it breaks the connection between treatment assignment and potential outcomes.
+
+Here's how it works. Take your sample and randomly assign some units to treatment and others to control. Since assignment is random, there's no systematic difference between the groups. Motivated students are equally likely to end up in treatment or control. Wealthy students are equally likely to be in each group. Every possible confounder, whether we've thought of it or not, is balanced across the groups on average.
+
+Let me demonstrate this with a simulation:
+
+```{r}
+# Simulate an experiment
+n <- 1000
+# Create potential confounders
+motivation <- rnorm(n)
+ability <- rnorm(n)
+family_income <- rnorm(n)
+
+# Potential outcomes depend on confounders
+y0 <- 50 + 5*motivation + 3*ability + 2*family_income + rnorm(n, 0, 5)
+y1 <- y0 + 10  # True treatment effect is 10
+
+# Random assignment
+treatment <- sample(c(0, 1), n, replace = TRUE)
+
+# Observed outcome
+y_observed <- ifelse(treatment == 1, y1, y0)
+
+# Compare treated and control
+mean_treated <- mean(y_observed[treatment == 1])
+mean_control <- mean(y_observed[treatment == 0])
+estimated_effect <- mean_treated - mean_control
+
+cat("Estimated treatment effect from experiment:", round(estimated_effect, 2), "\n")
+cat("True treatment effect: 10\n")
+
+# Check balance on confounders
+cat("\nChecking balance on confounders:\n")
+cat("Motivation difference:", 
+    round(mean(motivation[treatment == 1]) - mean(motivation[treatment == 0]), 3), "\n")
+cat("Ability difference:", 
+    round(mean(ability[treatment == 1]) - mean(ability[treatment == 0]), 3), "\n")
+cat("Income difference:", 
+    round(mean(family_income[treatment == 1]) - mean(family_income[treatment == 0]), 3), "\n")
+```
+
+See how the randomization balanced all the confounders across treatment and control? The differences are tiny, just random noise. This is why experiments give us valid causal estimates even when we don't know what all the confounders are.
+
+Sometimes we can't randomize treatment ourselves, but nature or policy does it for us. These are called natural experiments or quasi-experiments. Maybe admission to a school is determined by a cutoff score, and students just above and below the cutoff are essentially similar. Maybe a new law is implemented in some states but not others for arbitrary political reasons. These situations can provide experiment-like conditions without actual randomization.
+
+### Path 2: Statistical Adjustment
+
+When we can't randomize, we try to adjust for confounders statistically. This is what most empirical social science does. We measure potential confounders and include them in our statistical models, trying to compare "like with like."
+
+The problem is that we can only adjust for confounders we've measured. If we're studying the effect of college on earnings and we control for test scores, family income, and motivation, we're still vulnerable to unmeasured confounders like health, personality, or social connections.  With statistical adjustment (like regression, which we'll introduce next), we could try to control for confoudners and get closer to the truth.  But only if we've measured ability accurately and included it in our model.
+
+## Conclusion
+
+Causation is one of the most important concepts in data science, and also one of the most challenging. The fundamental problem of causal inference – that we can't observe counterfactuals – means we can never directly measure causal effects. Instead, we have to be clever about study design and careful about our assumptions.
+
+The key takeaways are these: First, correlation is not causation, and the difference between prediction and causation matters enormously for decision-making. Second, randomization is the gold standard for causal inference because it balances all confounders, even ones we haven't thought of. Third, when we can't randomize, we need to think carefully about what might confound our comparisons and do our best to adjust for these factors.
+
+Most importantly, be skeptical of causal claims. When someone says X causes Y, ask yourself: How do they know? Could there be confounders they haven't considered? Would the groups being compared be similar in the absence of treatment? The world is full of spurious correlations and confounded relationships. A little skepticism goes a long way.
+
+## Study Questions
+
+### Understanding Concepts
+
+1. What is the fundamental problem of causal inference? Explain why we can never directly observe the causal effect of a treatment on an individual.
+
+2. Explain the difference between prediction and causation. Give an example of something that would be useful for prediction but not for making policy decisions.
+
+3. What are potential outcomes? If we're studying whether a job training program increases employment, define Y(0) and Y(1) for an individual participant.
+
+### Identifying Relationships
+
+4. A study finds that cities with more police officers have higher crime rates. Draw arrows showing at least two possible explanations for this correlation. Which explanation is direct causation, and which shows confounding?
+
+5. Students who eat breakfast tend to get better grades. List three possible explanations for this pattern: one involving direct causation, one involving reverse causation, and one involving a confounding variable. Draw the arrows for each.
+
+6. Researchers notice that countries with [more chocolate consumption have more Nobel Prize winners per capita](https://www.nejm.org/doi/full/10.1056/NEJMon1211064). What's the most likely explanation for this correlation? What would be the confounder?
+
+### Applying Knowledge
+
+7. A researcher wants to study whether online classes lead to worse learning outcomes than in-person classes. What would be:
+
+   - The treatment variable (T)?
+   - The potential outcomes Y(1) and Y(0)?
+   - The average treatment effect (ATE)?
+   - Two potential confounders that could bias the comparison?
+
+8. Your friend says, "I started taking vitamin C and haven't gotten sick since. Vitamin C prevents illness!" What's wrong with this causal reasoning? [How would you properly test whether vitamin C prevents illness?](https://pmc.ncbi.nlm.nih.gov/articles/PMC1958969/)
+
+### Critical Thinking
+
+9. A city notices that streets with more bike lanes have fewer traffic accidents and concludes that bike lanes make streets safer. A skeptic argues that the city probably put bike lanes on streets that were already safer. How could you determine who's right? What would an ideal experiment look like?
+
+10. During the COVID-19 pandemic, some argued that lockdowns didn't work because places with strict lockdowns still had high case rates. Explain why this comparison might be confounded. What would you need to know to properly evaluate the causal effect of lockdowns?
+
+### Working with Data
+
+11. Suppose you have data on 1000 students. Half received free tutoring (randomly assigned) and half didn't. The tutored group has an average test score of 78, and the control group has an average of 72. 
+
+    - What is the estimated average treatment effect?
+    - Why can we interpret this difference as causal?
+    - If tutoring hadn't been randomly assigned, what problems might arise?
+
+12. A company wants to know if their new website design increases sales. They switch to the new design on January 1st and notice sales are 20% higher in January than in December. Why can't they conclude the new design caused the increase? Design a better test of the website's effect.
+
+

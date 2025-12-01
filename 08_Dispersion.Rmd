@@ -1,0 +1,334 @@
+# Measures of Dispersion
+
+## Learning Objectives
+
+1. Understand why measures of dispersion are essential for data analysis
+2. Calculate and interpret the **range** and **interquartile range (IQR)**
+3. Understand the concept of **deviation** from the mean
+4. Calculate and interpret **variance** and **standard deviation**
+5. Apply the **Empirical Rule** to normally distributed data
+6. Use R to calculate all measures of dispersion
+
+## What Is This For?
+
+Imagine two classes where students have the same average grade of 75%. In Class A, everyone scored between 73% and 77%. In Class B, scores ranged from 45% to 95%. While both classes have the same mean, they tell very different stories about student performance. This is why we need measures of **dispersion** (also called spread or variability).
+
+Measures of central tendency (mean, median, mode) tell us about the "typical" value in our data. But they don't tell us how well that typical value represents the entire dataset. Measures of dispersion answer questions like:
+
+- How spread out are the data points?
+- How representative is the mean?
+- Are there extreme values we should worry about?
+- How much variation should we expect?
+
+Understanding dispersion is crucial for:
+
+- **Risk assessment**: Higher dispersion often means higher uncertainty
+- **Quality control**: Consistent products have low dispersion
+- **Statistical inference**: Many statistical tests assume certain levels of dispersion
+- **Data description**: Dispersion helps paint a complete picture of your data
+
+## Simple Measures of Spread
+
+### Range
+
+The **range** is the simplest measure of dispersion:
+
+**Range = Maximum value - Minimum value**
+
+While easy to calculate, the range has significant limitations:
+
+- It only uses two data points (ignoring everything in between)
+- It's extremely sensitive to outliers
+- It tells us nothing about how data is distributed within that range
+
+For example, these two datasets have the same range (10):
+
+- Dataset A: 0, 5, 5, 5, 5, 10
+- Dataset B: 0, 1, 2, 8, 9, 10
+
+But Dataset B is clearly more spread out than Dataset A.
+
+### Interquartile Range (IQR)
+
+The **interquartile range** is more robust because it focuses on the middle 50% of the data:
+
+**IQR = Q3 (75th percentile) - Q1 (25th percentile)**
+
+The IQR has several advantages:
+
+- Not affected by extreme outliers
+- Gives a sense of the "typical" spread
+- Used to identify outliers (values beyond Q1 - 1.5×IQR or Q3 + 1.5×IQR)
+
+## Understanding Deviations
+
+To truly measure spread, we need to consider how far each data point is from the center. A **deviation** is the distance between an individual observation and the mean:
+
+$$\text{Deviation} = \bar{x}-x_i$$
+
+Where:
+
+- $x_i$ is an individual observation
+- $\bar{x}$ is the mean
+
+However, if we simply average all deviations, we get zero (positive and negative deviations cancel out). This leads us to more sophisticated measures. 
+
+## Variance: The Foundation of Statistical Spread
+
+**Variance** solves the cancellation problem by squaring each deviation before averaging:
+
+$$s^2 = \frac{\sum_{i=1}^{n} (x_i - \bar{x})^2}{n-1}$$
+
+Breaking this down:
+1. Calculate each deviation: (xᵢ - x̄)
+2. Square each deviation: (xᵢ - x̄)²
+3. Sum all squared deviations
+4. Divide by (n-1)
+
+**Why divide by (n-1)?** This is called Bessel's correction. When we use the sample mean (x̄) instead of the true population mean, we slightly underestimate the true variance. Dividing by (n-1) corrects this bias.
+
+### Understanding Variance Units
+
+Variance has squared units, which can be confusing:
+
+- If measuring height in inches, variance is in inches²
+- If measuring temperature in °C, variance is in (°C)²
+- If measuring test scores in points, variance is in points²
+
+These squared units make variance difficult to interpret directly, which leads us to...
+
+## Standard Deviation: Variance Made Practical
+
+The **standard deviation** is simply the square root of variance:
+
+$$s = \sqrt{s^2} = \sqrt{\frac{\sum_{i=1}^{n} (x_i - \bar{x})^2}{n-1}}$$
+
+Standard deviation brings us back to the original units, making it much more interpretable. It represents the "typical" distance from the mean.
+
+### Interpreting Standard Deviation
+
+- **Small standard deviation**: Data points cluster closely around the mean
+- **Large standard deviation**: Data points are spread far from the mean
+
+But what counts as "small" or "large"? Context matters:
+
+- Human height (sd ≈ 3 inches): relatively consistent
+- Stock prices (sd can be 20%+ of mean): highly variable
+- Manufacturing tolerances (sd < 0.001 inches): extremely precise
+
+### Standard Deviation and Outliers
+
+Both variance and standard deviation are **heavily influenced by outliers** because:
+
+1. Outliers create large deviations
+2. Squaring magnifies large values
+3. These inflated values dominate the sum
+
+This sensitivity can be a feature (detecting unusual variation) or a bug (overstating typical spread).
+
+## The Empirical Rule (68-95-99.7 Rule)
+
+For approximately **normal (bell-shaped) distributions**, the Empirical Rule provides powerful insights:
+
+- About **68%** of data falls within 1 standard deviation of the mean (x̄ ± 1s)
+- About **95%** of data falls within 2 standard deviations (x̄ ± 2s)
+- About **99.7%** of data falls within 3 standard deviations (x̄ ± 3s)
+
+### When to Use the Empirical Rule
+
+**Use it when:**
+
+- Your histogram looks roughly bell-shaped
+- Data is symmetric around the mean
+- You need quick estimates of data spread
+
+**Don't use it when:**
+
+- Data is clearly skewed
+- There are multiple peaks
+- Data has hard boundaries (like percentages that can't exceed 100%)
+
+### Video: Understanding the Empirical Rule
+
+For a visual explanation of measures of dispersion and the Empirical Rule, [watch this video](https://www.youtube.com/embed/E4HAYd0QnRc).
+
+## Calculating Dispersion in R
+
+Let's practice with real political science data. We'll use the 2020 American National Election Study (ANES) data, focusing on how Americans rated Joe Biden on a 0-100 "feeling thermometer" scale.
+
+First, load the data:
+
+```{r}
+# Load data from my computer, since the data is in the same folder
+anes2020 <- read.csv("anes2020.csv")
+
+# Examine structure
+str(anes2020)
+```
+
+### Calculating Basic Measures
+
+```{r}
+# Summary statistics including range and quartiles
+summary(anes2020$biden.th)
+
+# Range (manual calculation)
+range_biden <- max(anes2020$biden.th, na.rm = TRUE) - 
+               min(anes2020$biden.th, na.rm = TRUE)
+range_biden #print it out
+
+# Interquartile range
+iqr_biden<-IQR(anes2020$biden.th, na.rm = TRUE)
+iqr_biden # print it out
+```
+
+### Variance and Standard Deviation
+
+Now we can calculate the variance.
+
+```{r}
+# Variance
+var_biden <- var(anes2020$biden.th, na.rm = TRUE)
+var_biden
+
+# Standard deviation
+sd_biden <- sd(anes2020$biden.th, na.rm = TRUE)
+sd_biden
+
+# Verify: sd is square root of variance
+sqrt(var_biden)
+```
+
+
+
+### Comparing Measures of Spread
+
+Different measures tell different stories.  Here we are using the `cat()` function to combine the text and the numbers together.  Note that the `"\n"` syntax is used to indicate a "return" or a line break.
+
+```{r}
+# Create a comparison
+cat("Range:", range_biden, "\n")
+cat("IQR:", iqr_biden, "\n")
+cat("Standard Deviation:", sd_biden, "\n")
+```
+
+## Which Measure Should You Use?
+
+Choose your measure of dispersion based on your data and goals:
+
+### Use Range when:
+- You need a quick, rough estimate
+- Describing the full extent of data
+- The minimum and maximum have special meaning
+
+### Use IQR when:
+- Your data has outliers
+- You're using median as your measure of center
+- You want a robust measure unaffected by extremes
+
+### Use Standard Deviation when:
+- Your data is roughly normal
+- You're using mean as your measure of center
+- You need to make statistical inferences
+- You want to apply the Empirical Rule
+
+## Common Pitfalls
+
+### 1. Forgetting na.rm = TRUE
+```{r}
+# This will return NA if any values are missing
+sd(anes2020$biden.th)  # Returns NA
+
+# This removes NA values before calculating
+sd(anes2020$biden.th, na.rm = TRUE)  # Returns the standard deviation
+```
+
+### 2. Misinterpreting Large Standard Deviations
+A "large" standard deviation depends on context. Always compare it to:
+
+- The mean (coefficient of variation = sd/mean)
+- The possible range of values
+- Domain knowledge about typical variation
+
+### 3. Using Standard Deviation with Skewed Data
+The Empirical Rule assumes normality. With skewed data:
+
+- More or fewer observations may fall within ±1 sd
+- Consider using IQR instead
+- Transform data or use different methods (covered much later)
+
+## Summary
+
+Measures of dispersion complete our statistical picture:
+
+- **Central tendency** tells us the typical value
+- **Dispersion** tells us how typical that typical value is
+
+Key concepts to remember:
+
+- **Range** and **IQR** are simple but limited
+- **Variance** measures average squared deviation
+- **Standard deviation** is the square root of variance (back to original units)
+- The **Empirical Rule** applies only to normal distributions
+- Different measures suit different situations
+
+Together with measures of central tendency, these tools allow you to summarize any dataset effectively and identify when simple summaries might be misleading.
+
+## Study Questions
+
+### Conceptual Understanding
+
+1. Why do we need measures of dispersion in addition to measures of central tendency?
+
+2. Explain why the range might be misleading as a measure of spread. Give an example.
+
+3. What is a deviation? Why can't we just average all deviations to measure spread?
+
+4. Why do we square deviations when calculating variance?
+
+5. What's the relationship between variance and standard deviation? 
+
+6. Explain why we divide by (n-1) rather than n when calculating sample variance.
+
+### Interpretation
+
+7. If a dataset is bell shaped and has a mean of 50 and a standard deviation of 10, what does this tell you about the data?
+
+8. Dataset A has a standard deviation of 5, and Dataset B has a standard deviation of 15. Which dataset has more consistent values? How do you know?
+
+9. When would the IQR be a better measure of spread than the standard deviation?
+
+10. What conditions must be met to apply the Empirical Rule? Give an example of when you shouldn't use it.
+
+### Calculation Practice
+
+11. Given the values: 2, 4, 6, 8, 10
+
+    - Calculate the range
+    - Calculate the variance (show your work)
+    - Calculate the standard deviation
+
+12. If a normally distributed dataset has a mean of 100 and standard deviation of 15:
+
+    - What range of values contains about 68% of the data?
+    - What range contains about 95% of the data?
+    - Would a value of 140 be considered unusual? Why?
+
+### R Programming
+
+13. What's wrong with this code, and how would you fix it?
+
+    ```r
+    data <- c(1, 2, 3, NA, 5)
+    sd(data)
+    ```
+
+14. How would you calculate the coefficient of variation (sd/mean) for a variable in R?
+
+15. Write R code to determine what percentage of observations in a dataset fall within 2 standard deviations of the mean.
+
+### Critical Thinking
+
+16. A company reports that the average salary is \$75,000 with a standard deviation of \$50,000. What does this large standard deviation suggest about the salary distribution?
+
+17. How would outliers affect the range, IQR, and standard deviation differently? Which is most robust to outliers?

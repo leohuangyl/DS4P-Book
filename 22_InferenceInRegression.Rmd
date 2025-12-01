@@ -1,0 +1,294 @@
+# Statistical Inference in Regression
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. Understand what assumptions must hold for regression inference to be valid
+2. Test whether relationships between variables are "statistically significant."
+3. Interpret key components of R's regression output
+4. Calculate and interpret confidence intervals for regression coefficients
+
+## Why Do We Need Inference in Regression?
+
+In our last module, we learned how to estimate regression lines. We discovered how to calculate the slope and intercept that best fit our data. We even applied this to a real question: does economic performance influence presidential elections? When we regressed incumbent vote share on GDP growth, we found a positive slope. Better economic performance seemed to predict better electoral outcomes for the incumbent party.
+
+But finding a positive slope in our sample raises a crucial question we have not yet answered. Could this pattern have occurred just by random chance? If we had data from a different set of elections, would we find the same relationship? Or did we just get lucky with our particular data?
+
+This is where statistical inference comes in. Inference allows us to move beyond describing our specific sample to making statements about the broader population. It helps us determine whether the patterns we observe are likely to be real relationships or just statistical noise.
+
+Let us start by looking at what R tells us when we run a regression. Do not worry if you cannot interpret all of this yet. By the end of this module, you will understand every number in this output:
+
+```{r preview-output, echo=FALSE}
+# Load the voting data
+votes <- read.csv("votes.csv")
+
+# Run a simple regression
+model <- lm(vote ~ rdi4, data = votes)
+summary(model)
+```
+
+This output contains estimates, standard errors, t-statistics, p-values, and more. Each piece tells us something important about the relationship between economic performance and electoral outcomes. Let us learn how to read and interpret more of this information.
+
+## Quick Review: The Regression Line
+
+Let's briefly review what we are estimating. The regression model describes a linear relationship between two variables:
+
+$$Y_i = \alpha + \beta X_i + \epsilon_i$$
+
+In this equation, $Y_i$ is our outcome (incumbent vote share for election $i$), $X_i$ is our predictor (GDP growth for election $i$), $\alpha$ is the intercept, $\beta$ is the slope, and $\epsilon_i$ is the error term that captures everything else affecting the outcome.
+
+When we estimate this model using our data, we get:
+
+$$\hat{Y}_i = \hat{\alpha} + \hat{\beta} X_i$$
+
+The hats indicate these are estimates based on our sample. The intercept $\hat{\alpha}$ tells us the expected vote share when GDP growth equals zero. The slope $\hat{\beta}$ tells us how much vote share changes for each one percentage point increase in GDP growth.
+
+Let us visualize this with our presidential elections data:
+
+```{r plot-regression}
+# Create a scatterplot with regression line
+ggplot(votes, aes(x = rdi4, y = vote)) +
+  geom_point(size = 3, color = "darkblue") +
+  geom_smooth(method = "lm", se = TRUE, color = "red", fill = "pink", alpha = 0.3) +
+  labs(title = "Economic Performance and Electoral Success",
+       subtitle = "US Presidential Elections 1948-2012",
+       x = "Real Disposable Income Growth (%)",
+       y = "Incumbent Party Vote Share (%)") +
+  theme_minimal() +
+  theme(text = element_text(size = 12))
+```
+
+The red line shows our estimated regression line. The shaded area represents uncertainty about where the true line might be. This uncertainty is what we need to quantify through statistical inference.
+
+## Our Estimates Vary from Sample to Sample
+
+The uncertainty we are trying to quantify here is based on the idea that there is a fundamental "randomness" to our data.  In a survey, this randomness might come from the sampling procedure. Extending that analogy, we can imagine that elections in our dataset are just one possible sample from a broader population of elections that could occur under similar democratic institutions. If history had unfolded slightly differently, we would have different elections with different economic conditions and outcomes.
+
+
+This randomness is captured by the error term $\epsilon_i$ in our regression equation. These errors represent all the unpredictable factors that influence elections beyond economic growth: candidate quality, campaign strategies, unexpected scandals, international events, weather on election day, and countless other influences. Each election we observe represents one possible realization of these random factors. If we could rerun history with the same GDP growth values but different realizations of the random errors—different candidates, different campaign decisions, different news cycles—we would see different vote shares. This would lead to different estimates of \hat{\alpha}
+ and \hat{\beta} when we fit our regression line.
+
+This means our estimates $\hat{\alpha}$ and $\hat{\beta}$ are not fixed numbers. They are random variables that would take different values if we had different samples. If we could somehow replay history and get a different set of election results, we would get different estimates. 
+
+Statistical inference is all about understanding and quantifying this variation. How much might our estimates change from sample to sample? How confident can we be that our estimated slope is close to the true relationship? The key tool for answering these questions is the standard error.
+
+The standard error tells us how much our estimate would typically vary if we could repeat our study many times with different samples. A small standard error means our estimate is precise; we would get similar estimates across different samples. A large standard error means our estimate is imprecise; different samples might give quite different estimates.
+
+## The Gauss-Markov Assumptions (Simplified)
+
+For our statistical inference to be valid, we need certain conditions to hold. These are called the Gauss-Markov assumptions, named after the mathematicians who developed the theory. We will present a simplified version appropriate for our purposes.
+
+**Assumption 1: Linearity.** The relationship between X and Y follows a straight line. In our example, this means the effect of GDP growth on vote share is constant. A 1% increase in GDP growth has the same effect whether we are going from 0% to 1% or from 3% to 4%.
+
+**Assumption 2: Zero mean of errors.** On average, our errors equal zero. This means we are not systematically over-predicting or under-predicting. Our regression line goes through the center of the data cloud.
+
+**Assumption 3: Variation in X.** We need different values of our predictor variable. We cannot learn about the effect of GDP growth if growth was exactly 2% in every election. Fortunately, economic performance varies considerably across elections.
+
+**Assumption 4: Independence of errors.** The error in predicting one election does not affect errors in other elections. Knowing that we over-predicted vote share in 1992 tells us nothing about whether we will over or under-predict in 1996.
+
+**Assumption 5: Constant variance (Homoscedasticity).** The spread of points around the regression line is roughly the same whether GDP growth is high or low. The uncertainty in our predictions does not systematically change across different values of X.
+
+Let us visualize what happens when these assumptions are violated:
+
+```{r assumption-violations, echo=FALSE, fig.height=8}
+set.seed(123)
+n <- 100
+
+# Create data for different scenarios
+par(mfrow = c(2, 3))
+
+# Good - all assumptions met
+x_good <- runif(n, 0, 10)
+y_good <- 2 + 0.5 * x_good + rnorm(n, 0, 1)
+plot(x_good, y_good, main = "Good: All Assumptions Met", 
+     xlab = "X", ylab = "Y", pch = 19, col = rgb(0, 0, 1, 0.5))
+abline(lm(y_good ~ x_good), col = "red", lwd = 2)
+
+# Nonlinearity
+x_nonlin <- runif(n, 0, 10)
+y_nonlin <- 2 + .5 * x_nonlin^2 + rnorm(n, 0, 1)
+plot(x_nonlin, y_nonlin, main = "Violation: Nonlinearity", 
+     xlab = "X", ylab = "Y", pch = 19, col = rgb(0, 0, 1, 0.5))
+abline(lm(y_nonlin ~ x_nonlin), col = "red", lwd = 2)
+
+# Non-zero mean of errors (systematically off)
+x_bias <- runif(n, 0, 10)
+y_bias <- 2 + .5*x_bias + rnorm(n, 2, 1)  # errors have mean 2, not 0
+y_unbias <- 2 + .5*x_bias + rnorm(n, 0, 1)
+plot(x_bias, y_bias, main = "Violation: Non-zero Error Mean", 
+     xlab = "X", ylab = "Y", pch = 19, col = rgb(0, 0, 1, 0.5))
+abline(lm(y_unbias ~ x_bias), col = "red", lwd = 2)
+
+# No variation in X
+x_novar <- rep(5, n)
+y_novar <- 2 + 0.5 * x_novar + rnorm(n, 0, 1)
+plot(x_novar, y_novar, main = "Violation: No Variation in X", 
+     xlab = "X", ylab = "Y", pch = 19, col = rgb(0, 0, 1, 0.5),
+     xlim = c(0, 10))
+
+# Dependence (autocorrelation)
+x_dep <- 1:n
+errors <- arima.sim(model = list(ar = .9), n = n)
+y_dep <- 2 + 0.05 * x_dep + errors
+plot(x_dep, y_dep, main = "Violation: Dependent Errors", 
+     xlab = "Time", ylab = "Y", pch = 19, col = rgb(0, 0, 1, 0.5))
+abline(lm(y_dep ~ x_dep), col = "red", lwd = 2)
+
+# Heteroscedasticity
+x_het <- runif(n, 0, 10)
+y_het <- 2 + 0.5 * x_het + rnorm(n, 0, 0.3 * x_het)
+plot(x_het, y_het, main = "Violation: Heteroscedasticity", 
+     xlab = "X", ylab = "Y", pch = 19, col = rgb(0, 0, 1, 0.5))
+abline(lm(y_het ~ x_het), col = "red", lwd = 2)
+
+par(mfrow = c(1, 1))
+```
+
+When these assumptions hold reasonably well, we can trust our statistical inference. When they are severely violated, we need to be more cautious about our conclusions.
+
+## Testing Whether the Slope is Real: The t-statistic
+
+Now we come to one of the most important questions in regression analysis: is there really a relationship between our variables, or could the pattern we see be due to random chance?
+
+To answer this, we use hypothesis testing. Our null hypothesis is that there is no relationship between GDP growth and vote share:
+
+$$H_0: \beta = 0$$
+
+Our alternative hypothesis is that there is a relationship:
+
+$$H_a: \beta \neq 0$$
+
+To test this hypothesis, we calculate a t-statistic:
+
+$$t = \frac{\hat{\beta}}{SE(\hat{\beta})}$$
+
+This formula tells us how many standard errors our estimated slope is away from zero. The intuition is straightforward. If our estimate is many standard errors away from zero, it would be very unlikely to get such an estimate if the true slope were actually zero.
+
+A rule of thumb: if the absolute value of t is greater than 2, the result is usually statistically significant at the 0.05 level. This is because, with reasonable sample sizes, values more than 2 standard errors from zero occur less than 5% of the time by chance.
+
+Let us calculate this for our data:
+
+```{r t-statistic}
+# Get the coefficient information
+model <- lm(vote ~ rdi4, data = votes)
+summary(model)$coefficients
+```
+
+Looking at the rdi4 row, we can see the t-value is quite large (greater than 2 in absolute value), suggesting strong evidence against the null hypothesis of no relationship.
+
+## Understanding p-values
+
+The p-value gives us a more precise measure of the evidence against the null hypothesis. In the output, it is shown on the far right column with the name `Pr(>|t|)`. It answers the question: if there were truly no relationship between GDP growth and vote share, what is the probability we would see a relationship as strong as (or stronger than) what we observed?
+
+A small p-value means our observed relationship would be very unlikely if there were truly no relationship. By convention, we often use 0.05 as a threshold. If p < 0.05, we say the result is "statistically significant" and reject the null hypothesis.
+
+Several factors affect p-values:
+
+* First, effect size matters. Larger effects (bigger slopes) lead to smaller p-values, all else equal. A relationship where GDP growth changes vote share by 2 percentage points will have a smaller p-value than one where it changes vote share by 0.1 percentage points.
+
+* Second, precision matters. More precise estimates (smaller standard errors) lead to smaller p-values. This is why the t-statistic divides the estimate by its standard error.
+
+* Third, sample size matters. More data leads to more precise estimates (smaller standard errors), which leads to smaller p-values. This is why large studies can find "significant" effects that are practically tiny.
+
+It is **very important** to note that the p-value we are interested in (and there will be one for each regression term) is located in the column labeled `Pr(>|t|)`.  There is another p-value in the output that looks like this.
+
+```{r}
+## F-statistic: 18.38 on 1 and 15 DF,  p-value: 0.0006477
+```
+
+This is not (always) the same thing, and is related to a test of the overall model fit. So don't get confused!  (We will come back to this issue next class.)
+
+## Let's Read Real R Output Together
+
+Now we are ready to fully interpret regression output. Let us run our regression and examine each piece:
+
+```{r full-output}
+# Run the regression
+model <- lm(vote ~ rdi4, data = votes)
+
+# Display the full output
+summary(model)
+```
+
+Let us walk through the coefficients table line by line:
+
+**The (Intercept) row:**
+
+- *Estimate*: This is $\hat{\alpha}$, the expected incumbent vote share when GDP growth equals zero. In our data, it is about 46.3%, meaning incumbents typically lose when there is zero economic growth.
+- *Std. Error*: This tells us how precisely we estimated the intercept. A smaller value means more precision.
+- *t value*: This tests whether the intercept equals zero. Usually we are not interested in this test.
+- *Pr(>|t|)*: The p-value for testing if the intercept equals zero.
+
+**The rdi4 row (this is our main focus):**
+
+- *Estimate*: This is $\hat{\beta}$, telling us that each 1% increase in income growth increases incumbent vote share by about 2.29 percentage points.
+- *Std. Error*: The precision of our slope estimate. Here it is about 0.16, meaning our estimate is fairly precise.
+- *t value*: Our key test statistic. At 6.97, it is much larger than 2, providing strong evidence against the null hypothesis.
+- *Pr(>|t|)*: The p-value is extremely small (1.66e-08), far below 0.05. We have very strong statistical evidence for a relationship.
+- *Stars*: Visual aids where *** means p < 0.001, ** means p < 0.01, and * means p < 0.05.
+
+The bottom of the output shows additional information including the residual standard error and degrees of freedom, which we will discuss more in future modules.
+
+## Standard Errors: Where Do They Come From?
+
+Understanding what affects standard errors helps us design better studies and interpret results more thoughtfully. The standard error of the slope depends on three main factors:
+
+**Sample size (n).** More observations lead to smaller standard errors and more precise estimates. This is why researchers always want more data. Doubling the sample size roughly cuts the standard error by $\sqrt{2}$.
+
+**Variation in X.** More variation in our predictor variable leads to smaller standard errors. If GDP growth ranges from -5% to +10%, we will get more precise estimates than if it only ranges from 1% to 3%. We learn more about the relationship when we see X take many different values.
+
+**Unexplained variation.** Less scatter around the regression line leads to smaller standard errors. If other factors create a lot of noise in the relationship, our estimates become less precise.
+
+We can express this conceptually as:
+
+$$SE(\hat{\beta}) \approx \frac{\text{unexplained variation}}{\text{variation in X} \times \sqrt{n}}$$
+
+This formula, while simplified, captures the essential intuition. It explains why some studies find significant results while others studying the same question do not. A study with more data, more variation in the predictor, or less noise will have more power to detect relationships.
+
+## Confidence Intervals: A Range of Plausible Values
+
+While hypothesis tests tell us whether we can reject the null hypothesis, confidence intervals give us more information. They provide a range of plausible values for the population parameter.
+
+The interpretation is subtle but important. If we were to repeat our study many times with different samples, 95% of the confidence intervals calculated this way would contain the true population parameter $\beta$.
+
+Let us calculate the confidence interval for our economic voting example:
+
+```{r confidence-interval}
+# Get confidence intervals
+confint(model)
+```
+
+For the slope (rdi4), the 95% confidence interval runs from about 1.15 to 3.43. Notice that this interval does not include zero. This is another way to see that our result is statistically significant at the 0.05 level. If the confidence interval includes zero, we cannot reject the null hypothesis. If it excludes zero, we can reject the null.
+
+## From Statistics to Substance
+
+Finding statistical significance is not the end of our analysis. We must always ask whether the effect size is substantively meaningful. Statistical significance tells us the relationship is probably not due to chance. Substantive significance tells us whether the relationship matters in the real world.
+
+In our economic voting example, we found that each 1% increase in income growth increases incumbent vote share by about 2.29 percentage points. Is this a meaningful effect?
+
+To answer this, consider the range of economic growth in typical elections. GDP growth in our data ranges from about -4% during severe recessions to +7% during economic booms. The difference between a bad economy (-2%) and a good economy (+4%) is 6 percentage points of growth. Our model suggests this would translate to about 13.7 percentage points in vote share (6 × 2.29).  
+
+Given that many presidential elections are decided by margins of less than 5 percentage points, a 13.7 point swing is politically substantial. Most presidential elections are decided by much less! So while economic growth explains only part of electoral outcomes, the part it explains is large enough to swing close elections.
+
+## Reading Comprehension Questions
+
+1. **Understanding the Basics**: If our regression gives us $\hat{\alpha} = 48$ and $\hat{\beta} = 0.7$, what is the predicted incumbent vote share when GDP growth is 3%?
+
+2. **Interpreting t-statistics**: You run a regression and find a slope coefficient of 1.1 with a standard error of 0.5. What is the t-statistic? Based on the rule of thumb, is this likely to be statistically significant?
+
+3. **Understanding p-values**: If you get a p-value of 0.03 for your slope coefficient, what does this tell you? What would you conclude about the null hypothesis at the 0.05 significance level?
+
+4. **Assumptions:** A researcher studying campaign spending finds that the first $100,000 has large effects on vote share, but additional spending has diminishing returns. Which Gauss-Markov assumption might be violated here and why?
+
+5. **Confidence Intervals**: A regression of vote share on GDP growth gives a slope of 0.6 with a 95% confidence interval of [0.2, 1.0]. 
+   - Can we reject the null hypothesis that β = 0? How do you know?
+   - What does this interval tell us about the relationship?
+
+6. **Standard Errors**: You have two studies of economic voting. Study A uses 20 elections, Study B uses 100 elections. Both find the same slope estimate. All else equal, which study will likely have the smaller standard error and why?
+
+7. **Substantive Significance**: A study finds that each additional $1 million in campaign spending increases vote share by 0.01 percentage points (p < 0.001). The result is highly statistically significant. Should a candidate be excited about this finding? Why or why not?

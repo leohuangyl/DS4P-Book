@@ -1,0 +1,5 @@
+bookdown::gitbook:
+  config:
+    toc:
+      collapse: subsection
+    download: ["pdf", "epub", "mobi"]

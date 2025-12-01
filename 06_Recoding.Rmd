@@ -1,0 +1,505 @@
+# Creating and Transforming Variables in R
+
+## Learning Objectives
+
+1. Learn how to create new variables in a data frame using both base R and dplyr
+2. Master different approaches to recoding existing variables
+3. Understand how to create categorical variables from continuous data
+4. Learn to create dummy/indicator variables
+5. Practice using conditional logic to create complex variables
+
+## What Is This For?
+
+When working with real data, you'll rarely find variables in exactly the format you need for analysis. Survey data might code responses as numbers when you need meaningful labels. You might need to combine multiple variables to create a composite measure. Or you might need to transform continuous data into categories for certain analyses.
+
+This page teaches you the essential skills for transforming and creating variables - a crucial step between loading raw data and conducting meaningful analysis. These skills will help you:
+
+- Make your data more interpretable
+- Prepare variables for specific statistical techniques
+- Create new measures that better capture your theoretical concepts
+- Handle different coding schemes across datasets
+
+## The CCES Dataset
+
+For this session, we'll use data from the Cooperative Congressional Election Study (CCES), one of the largest academic surveys in the United States. This dataset contains responses from 124,600 Americans about their political attitudes, behaviors, and demographics.
+
+```{r, message=FALSE}
+# Load necessary packages
+library(dplyr)
+library(tidyverse)
+
+# Load the CCES data
+cces <- read.csv("cces.csv", row.names = 1)
+
+# Explore the structure
+dim(cces)
+names(cces)
+```
+
+Key variables we'll work with include:
+
+- `age`: Respondent's age in years
+- `pid7`: Party identification (0-1 scale, higher = more Democratic)
+- `aware`: Political awareness score (0-1 scale)
+- `income`: Household income quintile
+- `vote`: Presidential vote choice (1 = Democrat, 0 = Republican)
+
+## Creating New Variables from Scratch
+
+The simplest form of variable creation involves mathematical operations on existing variables. We'll show both base R and dplyr approaches.
+
+### Adding Constants
+
+Sometimes you need a constant value for all observations:
+
+```{r}
+# Base R approach
+cces$survey_year <- 2020
+cces$respondent_id <- 1:nrow(cces)
+
+# dplyr approach
+cces <- cces %>%
+  mutate(survey_year_2 = 2020,
+         respondent_id_2 = row_number())
+
+# Verify they're the same
+identical(cces$survey_year, cces$survey_year_2)
+```
+
+### Simple Arithmetic Combinations
+
+Create new variables by combining existing ones:
+
+```{r}
+# Base R approach: years until retirement
+cces$years_to_retire <- 65 - cces$age 
+cces$years_to_retire[cces$years_to_retire < 0] <- 0 # Code all cases where they are over 65 as zero
+
+# dplyr approach: same calculation
+cces <- cces %>%
+  mutate(years_to_retire_2 = pmax(65 - age, 0))  # pmax ensures no negative values
+
+# Convert awareness to percentage - Base R
+cces$aware_pct <- cces$aware * 100
+
+# Convert awareness to percentage - dplyr
+cces <- cces %>%
+  mutate(aware_pct_2 = aware * 100)
+
+# Compare the two approaches
+cces$aware_pct[1:10] # show first 10 observations
+cces$aware_pct_2[1:10] # show same first 10 observations
+
+```
+
+## Mathematical Transformations
+
+Sometimes we need to transform variables to different scales or distributions.
+
+### Rescaling Variables
+
+Political scientists often need to rescale variables to make them comparable:
+
+```{r}
+# Base R: Rescale party ID from 0-1 to 1-7
+cces$pid7_traditional <- round(cces$pid7 * 6 + 1)
+
+# dplyr approach
+cces <- cces %>%
+  mutate(pid7_traditional_2 = round(pid7 * 6 + 1))
+
+# Check both transformations
+table(Base_R = cces$pid7_traditional, dplyr = cces$pid7_traditional_2)
+```
+
+## Recoding Variables
+
+Recoding changes the values of a variable according to specified rules.
+
+### Using Base R Methods
+
+The simplest approach uses logical indexing:
+
+```{r}
+# Base R: Create text labels for vote choice
+cces$vote_label <- NA  # Start with NA
+cces$vote_label[cces$vote == 1] <- "Democrat"
+cces$vote_label[cces$vote == 0] <- "Republican"
+
+# Alternative base R using ifelse
+cces$vote_label_alt <- ifelse(cces$vote == 1, "Democrat", 
+                              ifelse(cces$vote == 0, "Republican", NA))
+
+table(cces$vote_label)
+```
+
+### Using dplyr Methods
+
+The dplyr package offers multiple approaches for recoding:
+
+```{r}
+# Using recode()
+cces <- cces %>%
+  mutate(vote_label_2 = dplyr::recode(vote,
+                               `1` = "Democrat",
+                               `0` = "Republican"))
+
+# Using case_when() - more flexible
+cces <- cces %>%
+  mutate(vote_label_3 = case_when(
+    vote == 1 ~ "Democrat",
+    vote == 0 ~ "Republican",
+    TRUE ~ NA_character_  # Catch all other cases
+  ))
+
+# Recode education levels
+cces <- cces %>%
+  mutate(educ_label = dplyr::recode(educ,
+    `1` = "No HS",
+    `2` = "High school", 
+    `3` = "Some college",
+    `4` = "2-year degree",
+    `5` = "4-year degree",
+    `6` = "Post-grad"
+  ))
+```
+
+### Reversing Scales
+
+Sometimes you need to reverse a scale's direction:
+
+```{r}
+# Base R: Create Republican partisanship
+cces$pid7_republican <- 1 - cces$pid7
+
+# dplyr approach
+cces <- cces %>%
+  mutate(pid7_republican_2 = 1 - pid7)
+
+```
+
+## Creating Categorical Variables from Continuous Data
+
+The `cut()` function divides continuous variables into categories.
+
+### Equal-Width Categories
+
+```{r}
+# Base R approach
+cces$age_groups <- cut(cces$age, 
+                       breaks = c(18, 38, 58, 78, 100),
+                       labels = c("18-37", "38-57", "58-77", "78+"),
+                       include.lowest = TRUE)
+
+# dplyr approach - same cut() function within mutate
+cces <- cces %>%
+  mutate(age_groups_2 = cut(age, 
+                            breaks = c(18, 38, 58, 78, 100),
+                            labels = c("18-37", "38-57", "58-77", "78+"),
+                            include.lowest = TRUE))
+
+table(cces$age_groups)
+```
+
+
+### Creating Meaningful Breakpoints
+
+Use substantively meaningful cutoffs:
+
+```{r}
+# Calculate birth year first
+current_year <- 2020
+
+# Base R approach
+cces$birth_year <- current_year - cces$age
+cces$generation <- cut(cces$birth_year,
+                      breaks = c(1900, 1945, 1964, 1980, 1996, 2010),
+                      labels = c("Silent", "Boomer", "Gen X", "Millennial", "Gen Z"))
+
+# dplyr approach - all in one pipeline
+cces <- cces %>%
+  mutate(birth_year_2 = current_year - age,
+         generation_2 = cut(birth_year_2,
+                           breaks = c(1900, 1945, 1964, 1980, 1996, 2010),
+                           labels = c("Silent", "Boomer", "Gen X", "Millennial", "Gen Z")))
+
+table(cces$generation, cces$generation_2)
+```
+
+## Creating Dummy/Indicator Variables
+
+Dummy variables are binary (0/1) variables that indicate membership in a category.
+
+### Manual Creation
+
+Create dummy variables using logical conditions:
+
+```{r}
+# Base R approach
+cces$elderly <- ifelse(cces$age >= 65, 1, 0)
+cces$high_awareness <- ifelse(cces$aware > 0.7, 1, 0)
+
+# dplyr approach
+cces <- cces %>%
+  mutate(elderly_2 = if_else(age >= 65, 1, 0),
+         high_awareness_2 = if_else(aware > 0.7, 1, 0, missing = NA_real_))
+
+# Check proportions
+mean(cces$elderly, na.rm = TRUE)
+mean(cces$elderly_2, na.rm = TRUE)
+```
+
+### Using Logical Operators for Complex Cases
+
+Often we need to create indicators based on multiple conditions combined with AND (`&`) or OR (`|`) operators. Let's create a "swing voter" indicator - these are voters who might be persuadable because they're both ideologically moderate AND not strongly partisan.
+
+First, let's understand our variables:
+
+- `ideo` ranges from 0 (very conservative) to 1 (very liberal), so 0.5 is the center
+- `pid7` ranges from 0 (strong Republican) to 1 (strong Democrat), so 0.5 is independent
+
+```{r}
+# Base R: Swing voter indicator
+# We want people who are:
+# 1. Ideologically moderate (within 0.2 of center on ideology scale)
+# 2. AND politically independent (within 0.2 of center on party ID scale)
+
+cces$swing_voter <- ifelse(
+  abs(cces$ideo - 0.5) < 0.2 &    # abs() gets distance from center
+  abs(cces$pid7 - 0.5) < 0.2,      # & means BOTH conditions must be true
+  1,                                # If both conditions met, assign 1
+  0                                 # Otherwise, assign 0
+)
+
+# Let's see what we created
+table(cces$swing_voter)
+mean(cces$swing_voter, na.rm = TRUE)  # Proportion of swing voters
+```
+
+The `abs()` function calculates absolute value - the distance from center regardless of direction. So `abs(0.7 - 0.5) = 0.2` and `abs(0.3 - 0.5) = 0.2`. Both are equally far from center.
+
+Now let's do the same thing using dplyr's `case_when()`:
+
+```{r}
+# dplyr approach
+cces <- cces %>%
+  mutate(swing_voter_2 = case_when(
+    abs(ideo - 0.5) < 0.2 & abs(pid7 - 0.5) < 0.2 ~ 1,
+    TRUE ~ 0  # This catches all other cases
+  ))
+
+# Verify they're identical
+table(BaseR = cces$swing_voter, dplyr = cces$swing_voter_2)
+```
+
+The power of `mutate()` really shines when creating multiple related variables at once. Instead of writing three separate assignment statements, we can create a whole set of age-based indicators in one clean pipeline:
+
+```{r}
+# Using mutate with multiple new variables at once
+cces <- cces %>%
+  mutate(
+    young_voter = if_else(age < 30, 1, 0),
+    senior_voter = if_else(age >= 65, 1, 0),
+    midlife_voter = if_else(age >= 40 & age < 65, 1, 0)
+  )
+
+# Check our work - these should be mutually exclusive except for young/midlife
+table(Young = cces$young_voter, Senior = cces$senior_voter)
+table(Young = cces$young_voter, Midlife = cces$midlife_voter)
+
+# We can also use OR conditions - let's identify priority outreach targets
+cces <- cces %>%
+  mutate(
+    # Target young OR senior voters (two key demographics)
+    priority_demo = if_else(age < 30 | age >= 65, 1, 0)
+  )
+
+# What proportion of voters are in our priority demographics?
+mean(cces$priority_demo, na.rm = TRUE)
+```
+
+Note the difference:
+
+- `&` (AND): Both conditions must be true
+- `|` (OR): At least one condition must be true
+
+This becomes powerful when combining multiple characteristics to identify specific voter segments for analysis or targeting.
+
+### Using the fastDummies Package
+
+For creating multiple dummy variables at once:
+
+```{r, message=FALSE}
+library(fastDummies)
+
+# Create dummy variables for all regions
+cces_with_dummies <- dummy_cols(cces, 
+                                select_columns = "region",
+                                remove_first_dummy = TRUE)
+
+# Alternative: Manual dplyr approach for specific dummies
+cces <- cces %>%
+  mutate(
+    region_northeast = if_else(region == "Northeast", 1, 0),
+    region_midwest = if_else(region == "Midwest", 1, 0),
+    region_south = if_else(region == "South", 1, 0),
+    region_west = if_else(region == "West", 1, 0)
+  )
+```
+
+## Conditional Variable Creation
+
+For complex conditions, `case_when()` is the most powerful tool.
+
+### Creating Voter Typologies
+
+```{r}
+# Base R approach using nested ifelse (gets messy quickly!)
+cces$voter_type_base <- ifelse(
+  cces$aware > 0.8 & cces$interest > 0.8, "Highly Engaged",
+  ifelse(cces$aware > 0.5 & cces$interest > 0.5, "Moderately Engaged",
+  ifelse(cces$aware < 0.3 & cces$interest < 0.3, "Disengaged",
+  ifelse(cces$aware > 0.7 & cces$interest < 0.3, "Informed but Apathetic",
+  ifelse(cces$aware < 0.3 & cces$interest > 0.7, "Interested but Uninformed",
+  "Mixed")))))
+
+# dplyr approach - much cleaner!
+cces <- cces %>%
+  mutate(voter_type = case_when(
+    aware > 0.8 & interest > 0.8 ~ "Highly Engaged",
+    aware > 0.5 & interest > 0.5 ~ "Moderately Engaged",
+    aware < 0.3 & interest < 0.3 ~ "Disengaged",
+    aware > 0.7 & interest < 0.3 ~ "Informed but Apathetic",
+    aware < 0.3 & interest > 0.7 ~ "Interested but Uninformed",
+    TRUE ~ "Mixed"
+  ))
+
+table(cces$voter_type)
+```
+
+## Best Practices and Common Pitfalls
+
+### Document Your Transformations
+
+```{r}
+# Well-documented transformation
+cces <- cces %>%
+  mutate(
+    # Political knowledge scale: combines awareness (0-1) and interest (0-1)
+    # Rescaled to 0-100 for easier interpretation
+    knowledge_scale = ((aware + interest) / 2) * 100,
+    
+    # Binary indicator for high political knowledge (top 25%)
+    high_knowledge = knowledge_scale > quantile(knowledge_scale, 0.75, na.rm = TRUE)
+  )
+```
+
+### Chain Multiple Transformations
+
+dplyr makes it easy to create multiple related variables:
+
+```{r}
+# Create a series of related variables in one pipeline
+cces <- cces %>%
+  mutate(
+    # First create age categories
+    age_cat = cut(age, breaks = c(18, 30, 45, 65, 100),
+                  labels = c("Young", "Middle", "Older", "Senior")),
+    # Then create dummies based on those categories
+    is_young = if_else(age_cat == "Young", 1, 0),
+    is_senior = if_else(age_cat == "Senior", 1, 0),
+    # And create interaction variables
+    young_democrat = is_young * (pid7 > 0.6),
+    senior_republican = is_senior * (pid7 < 0.4)
+  )
+```
+
+### Handle Missing Values Explicitly
+
+```{r}
+# Base R approach
+sum(is.na(cces$aware))
+
+# Problem: NAs propagate
+cces$problem_var <- cces$aware * 2  # NAs remain NAs
+
+# Solution 1: Exclude NAs in creation
+cces$high_aware_base <- ifelse(!is.na(cces$aware) & cces$aware > 0.7, 1, 
+                              ifelse(!is.na(cces$aware), 0, NA))
+
+# Solution 2: dplyr with explicit NA handling
+cces <- cces %>%
+  mutate(
+    high_aware_clean = case_when(
+      is.na(aware) ~ NA_real_,  # Preserve NAs
+      aware > 0.7 ~ 1,
+      TRUE ~ 0
+    ),
+    # Or use if_else with missing parameter
+    high_aware_alt = if_else(aware > 0.7, 1, 0, missing = NA_real_)
+  )
+```
+
+## Summary
+
+Creating and transforming variables is an essential data preparation skill. Key takeaways:
+
+1. **Both approaches work** - Base R is direct, dplyr is often cleaner for complex operations
+2. **dplyr excels at** - Multiple transformations, complex conditions, readable code
+3. **Use case_when()** - For anything more complex than a simple if-else
+4. **Chain operations** - dplyr's %>% makes sequential transformations clear
+5. **Be explicit with NAs** - Both approaches require careful handling of missing values
+
+The dplyr approach generally produces more readable code, especially for complex transformations. However, knowing both methods makes you a more versatile data analyst.
+
+## Study Questions
+
+### Understanding Variable Creation Basics
+
+1. What operator do you use to create a new variable in base R? What function do you use in dplyr?
+
+2. If you have a variable `income` in thousands and want to convert it to actual dollars, write the code using both base R and dplyr.
+
+
+### Simple Recoding
+
+3. Explain what this code does in plain English:
+   ```r
+   cces$vote_label <- ifelse(cces$vote == 1, "Democrat", "Republican")
+   ```
+
+4. What are the three arguments in the `ifelse()` function? What does each one do?
+
+5. If you have a party ID scale from 0 to 1, how would you reverse it so that 0 becomes 1 and 1 becomes 0?
+
+### Using cut() for Categories
+
+6. What does `cut()` do to a continuous variable like age?
+
+7. In `cut(age, breaks = c(18, 35, 65, 100))`, what are the three categories that will be created?
+
+### Creating Dummy Variables
+
+8. What values does a dummy variable contain?
+
+9. Write the code to create a dummy variable `is_adult` that equals 1 if age is 18 or older, and 0 otherwise.
+
+10. What does the `&` operator do when creating dummy variables? What about `|`?
+
+### Understanding dplyr Basics
+
+11. What does `%>%` do in dplyr code?
+
+12. What's the advantage of using `mutate()` to create multiple variables at once?
+
+13. Convert this base R code to dplyr:
+    ```r
+    cces$age_group <- ifelse(cces$age >= 65, "Senior", "Non-senior")
+    ```
+
+### Working with Missing Values
+
+14. If a variable contains some NA values and you multiply it by 100, what happens to the NA values?
+
+15. In `ifelse()`, what happens if the condition (`cces$age > 65`) is NA?
+

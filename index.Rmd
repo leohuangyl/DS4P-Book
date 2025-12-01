@@ -1,0 +1,27 @@
+---
+title: "Data Science for Politics"
+author: "Professor Montgomery"
+date: "2025"
+site: bookdown::bookdown_site
+documentclass: book
+output:
+  bookdown::gitbook: default
+  prettydoc::html_pretty:
+    theme: leonids
+    self-contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lmtest)
+library(haven)
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(stargazer)
+```
+
+# Preface
+
+Welcome to the class.
